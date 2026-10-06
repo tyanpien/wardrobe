@@ -1,0 +1,35 @@
+.chat {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  min-height: 360px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.list,
+.thread {
+  padding: 16px;
+}
+
+.list {
+  border-right: 1px solid var(--color-border);
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .chat {
+    grid-template-columns: 1fr;
+  }
+
+  .list {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+}

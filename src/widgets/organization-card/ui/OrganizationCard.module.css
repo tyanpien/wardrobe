@@ -1,0 +1,14 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  font-size: 18px;
+}
+
+.meta {
+  color: var(--color-muted);
+  font-size: 14px;
+}
