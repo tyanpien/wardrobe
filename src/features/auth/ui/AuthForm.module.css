@@ -1,0 +1,494 @@
+.authPage {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: grid;
+  grid-template-columns: 42% 58%;
+
+  width: 100%;
+  height: 100vh;
+
+  overflow: hidden;
+
+  background: #f8f7ee;
+}
+
+.authImage {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+}
+
+.authImageContent {
+  object-fit: cover;
+  object-position: center;
+}
+
+.authContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 0;
+  height: 100%;
+
+  background: #f8f7ee;
+}
+
+.formWrapper {
+  width: min(100%, 500px);
+  padding: 40px 50px;
+}
+
+.authHeader {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  margin-bottom: 48px;
+}
+
+.backButton {
+  position: absolute;
+  left: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  padding: 0;
+
+  border: none;
+  background: transparent;
+
+  cursor: pointer;
+}
+
+.backButton img {
+  display: block;
+
+  width: 24px;
+  height: 24px;
+}
+
+.authTitle {
+  display: block;
+
+  color: #000;
+
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field label {
+  color: #000000;
+  padding-left: 14px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.field input {
+  box-sizing: border-box;
+
+  width: 100%;
+  height: 44px;
+
+  padding: 0 4px 0 14px;
+
+  border: 0;
+  border-bottom: 1px solid #000000;
+  border-radius: 12px;
+
+  outline: none;
+  background: transparent;
+
+  color: #000000;
+
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.field input::placeholder {
+  color: #96958B;
+}
+
+.field input:focus {
+  border-bottom-color: #000;
+}
+
+.inputError {
+  border-bottom-color: #6D0009 !important;
+}
+
+.passwordWrapper {
+  position: relative;
+
+  width: 100%;
+}
+
+.passwordWrapper input {
+  padding-right: 45px;
+}
+
+.eyeButton {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  transform: translateY(-50%);
+
+  cursor: pointer;
+}
+
+.eyeButton img {
+  display: block;
+}
+
+.forgotPassword {
+  align-self: flex-end;
+
+  margin-top: -8px;
+
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  color: #83781B;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+}
+
+.submitButton {
+  width: 100%;
+  height: 48px;
+
+  margin-top: 6px;
+
+  border: 0;
+  border-radius: 24px;
+
+  background: #709255;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.submitButton:hover {
+  background: #86AC68;
+}
+
+.submitButton:active {
+  background: #5E7949;
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.switchText {
+  margin: 22px 0 0;
+
+  color: #222222;
+
+  font-size: 14px;
+  line-height: 1.5;
+
+  text-align: center;
+}
+
+.switchLink {
+  color: #83781B;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.switchLink:hover {
+  color: #a69c4d;
+}
+
+.error {
+  margin-top: -4px;
+  font-weight: 400;
+  color: #6D0009;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.agreement {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  color: #000000;
+
+  font-size: 14px;
+  line-height: 1.4;
+
+  cursor: pointer;
+}
+
+.agreement input {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  opacity: 0;
+  pointer-events: none;
+}
+
+.customCheckbox {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 18px;
+  height: 18px;
+
+  border: 1px solid #96958b;
+  border-radius: 0;
+
+  background: transparent;
+
+  box-sizing: border-box;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.agreement:hover .customCheckbox {
+  border-color: #000000;
+}
+
+.checkboxIcon {
+  display: block;
+
+  width: 18px;
+  height: 18px;
+
+  object-fit: contain;
+}
+
+.agreement input:checked + .customCheckbox {
+  border-color: #000000;
+  background: #789c58;
+}
+
+.agreementText {
+  color: #222222;
+}
+
+.agreementLink {
+  color: #83781b;
+}
+
+/* Success */
+.successWrapper {
+  width: min(100%, 500px);
+}
+
+.successIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 150px;
+  margin-left: 20%;
+  margin-bottom: 60px;
+}
+
+.successIcon span {
+  color: #ffffff;
+
+  font-size: 76px;
+  font-weight: 400;
+  line-height: 1;
+
+  transform: translateY(-4px);
+}
+
+.successTitle {
+  margin: 0 0 30px;
+  color: #000000;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
+.successDescription {
+  margin: 0 0 36px;
+  color: #000000;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.successActions {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+}
+
+.successContinue {
+  min-width: 110px;
+  height: 42px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 32px;
+  background: #709255;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.successContinue:hover {
+  background: #6d914f;
+}
+
+.successSkip {
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  color: #709255;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.successSkip:hover {
+  color: #6d914f;
+}
+
+.successImage {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center;
+
+  display: block;
+}
+
+@media (max-width: 700px) {
+  .successWrapper {
+    width: 100%;
+  }
+
+  .successIcon {
+    width: 90px;
+    height: 90px;
+
+    margin-bottom: 45px;
+  }
+
+  .successIcon span {
+    font-size: 62px;
+  }
+
+  .successTitle {
+    font-size: 30px;
+  }
+}
+
+
+
+
+@media (max-width: 900px) {
+  .authPage {
+    grid-template-columns: 35% 65%;
+  }
+
+  .formWrapper {
+    padding: 32px;
+  }
+
+  .backButton {
+    gap: 50px;
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 700px) {
+  .authPage {
+    grid-template-columns: 1fr;
+  }
+
+  .authImage {
+    display: none;
+  }
+
+  .authContent {
+    width: 100%;
+  }
+
+  .formWrapper {
+    width: min(100%, 500px);
+    padding: 32px 24px;
+  }
+
+  .backButton {
+    gap: 28px;
+    margin-bottom: 42px;
+    font-size: 30px;
+  }
+}

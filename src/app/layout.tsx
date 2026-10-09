@@ -1,21 +1,23 @@
-import type { Metadata } from "next";
+import "./globals.css";
 import type { ReactNode } from "react";
+import { Roboto } from "next/font/google";
 import { Header } from "@/widgets/header";
 import { Footer } from "@/widgets/footer";
-import styles from "./shell.module.css";
-import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Добрый шкаф",
-  description: "Платформа для передачи вещей, помощи организациям и волонтерства.",
-};
+const roboto = Roboto({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "600", "700"],
+  display: "swap",
+  preload: true,
+  adjustFontFallback: true,
+});
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ru">
-      <body>
+      <body className={roboto.className}>
         <Header />
-        <div className={styles.shell}>{children}</div>
+        {children}
         <Footer />
       </body>
     </html>

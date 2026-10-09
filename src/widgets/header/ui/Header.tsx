@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import styles from "./Header.module.css";
+import { usePathname } from "next/navigation";
 
 const NAV_LINKS = [
   { href: "/", label: "Главная" },
@@ -9,6 +12,8 @@ const NAV_LINKS = [
 ];
 
 export function Header() {
+  const pathname = usePathname();
+  
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
@@ -22,11 +27,9 @@ export function Header() {
             </Link>
           ))}
         </nav>
-        <div className={styles.actions}>
-          <Link href="/login">Вход</Link>
-          <Link href="/register">Регистрация</Link>
-          <Link href="/profile">Профиль</Link>
-        </div>
+        <Link href={`/login?from=${encodeURIComponent(pathname)}`}>
+          Войти
+        </Link>
       </div>
     </header>
   );
