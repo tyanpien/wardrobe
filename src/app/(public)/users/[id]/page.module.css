@@ -1,0 +1,524 @@
+.page {
+    width: min(1340px, calc(100% - 64px));
+    margin: 50px auto 90px;
+    color: #1C1C1C;
+  }
+  
+  .profile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 350px;
+    align-items: stretch;
+    margin-bottom: 32px;
+  }
+  
+  .userCard {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0;
+    padding: 24px;
+    background: #fff;
+    border-radius: 10px;
+  }
+  
+  .avatar,
+  .avatarFallback {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+  }
+  
+  .avatar {
+    object-fit: cover;
+  }
+  
+  .avatarFallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #dedede;
+    font-size: 25px;
+  }
+  
+  .userInfo {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .userInfo h1 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  
+  .city {
+    margin: 0;
+    font-size: 14px;
+  }
+  
+  .about {
+    margin: 14px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  
+  .messageButton {
+    flex: 0 0 auto;
+    min-width: 120px;
+    padding: 10px 16px;
+    border-radius: 9px;
+    background: #1c1c1c;
+    color: #fff;
+    text-align: center;
+    font-size: 13px;
+    transition: background 0.2s;
+  }
+  
+  .messageButton:hover {
+    background: #393939;
+  }
+  
+  .impact {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-height: 120px;
+    background: #E7F9A9;
+    border-radius: 12px;
+  }
+  
+  .impact strong {
+    font-size: 58px;
+    line-height: 1;
+  }
+  
+  .impact strong span {
+    margin-left: 3px;
+    font-size: 25px;
+  }
+  
+  .impact > span {
+    margin-top: 6px;
+    font-size: 18px;
+  }
+  
+  .adsSection {
+    min-width: 0;
+  }
+  
+  .sectionHeading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .sectionHeading h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+  
+  .filterWrap,
+  .transferWrap {
+    position: relative;
+  }
+  
+  .filterTrigger,
+  .transferTrigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    color: #161616;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .filterTrigger img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+  
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  
+  .transferTrigger {
+    gap: 10px;
+  }
+  
+  .arrow {
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+    transition: transform 0.2s;
+  }
+  
+  .arrowOpen {
+    transform: rotate(180deg);
+  }
+  
+  .transferMenu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 20;
+    width: 205px;
+    padding: 6px;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 6px 20px #00000012;
+  }
+  
+  .transferMenu button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+  }
+  
+  .transferMenu button:hover {
+    background: #f5f2dc;
+  }
+  
+  .resultCount {
+    color: #777;
+    font-size: 13px;
+  }
+  
+  .filterPanel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 30;
+    width: 290px;
+    max-height: min(70vh, 600px);
+    overflow-y: auto;
+    padding: 20px;
+    border: 1px solid #777;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 6px 22px #00000014;
+  }
+  
+  .filterHeading {
+    margin: 4px 0 10px;
+    font-size: 14px;
+  }
+  
+  .filterHeading:not(:first-child) {
+    margin-top: 20px;
+  }
+  
+  .checkRow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 10px 0;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .checkRow input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  
+  .customCheckbox {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    border: 1px solid #1C1C1C;
+    border-radius: 0;
+    background: #fff;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+  
+  .customCheckbox img {
+    display: none;
+    width: 15px;
+    height: 15px;
+    object-fit: contain;
+  }
+  
+  .checkRow input:checked + .customCheckbox {
+    background: #e8f9a8;
+  }
+  
+  .checkRow input:checked + .customCheckbox img {
+    display: block;
+  }
+  
+  .checkRow input:focus-visible + .customCheckbox {
+    outline: 2px solid #161616;
+    outline-offset: 2px;
+  }
+  
+  .select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #777;
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    font-size: 14px;
+  }
+  
+  .resetButton {
+    width: 100%;
+    margin-top: 18px;
+    padding: 10px;
+    border: 1px solid #777;
+    border-radius: 8px;
+    background: #e8f9a8;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .resetButton:hover {
+    background: #d9ef8d;
+  }
+  
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 20px;
+  }
+  
+  .adCard {
+    min-width: 0;
+    padding: 10px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #fff;
+  }
+  
+  .photoArea {
+    position: relative;
+  }
+  
+  .photoPlaceholder,
+  .itemPhoto {
+    display: block;
+    width: 100%;
+    height: 240px;
+    border-radius: 9px;
+    background: #d9d9d9;
+  }
+  
+  .itemPhoto {
+    object-fit: cover;
+  }
+  
+  .dots {
+    position: absolute;
+    right: 0;
+    bottom: 10px;
+    left: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .dots i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #8c8c8c;
+  }
+  
+  .dots i:first-child {
+    width: 9px;
+    height: 9px;
+    background: #191919;
+  }
+  
+  .cardBody {
+    padding: 16px 0 12px;
+  }
+  
+  .locationPin {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 10px;
+    color: #1C1C1C;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  
+  .locationPin img {
+    display: block;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  
+  .adCity {
+    margin: 0 0 12px;
+    color: #666;
+    font-size: 12px;
+  }
+  
+  .cardBody h3 {
+    margin: 0 0 10px;
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  
+  .description {
+    min-height: 48px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 16px;
+  }
+  
+  .tags span {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #e7f8a5;
+    color: #555;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+  
+  .tags .darkTag {
+    background: #57464f;
+    color: #fff;
+  }
+  
+  .emptyState {
+    grid-column: 1 / -1;
+    min-height: 440px;
+    padding: 45px 20px;
+    border-radius: 10px;
+    background: #fff;
+    text-align: center;
+  }
+  
+  @media (max-width: 900px) {
+    .page {
+      width: calc(100% - 32px);
+    }
+  
+    .profile {
+      grid-template-columns: minmax(0, 1fr) 170px;
+      gap: 16px;
+    }
+  
+    .userCard {
+      flex-wrap: wrap;
+      padding: 18px;
+    }
+  
+    .messageButton {
+      margin-left: 80px;
+    }
+  
+    .cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  
+    .photoPlaceholder,
+    .itemPhoto {
+      height: 210px;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .page {
+      width: calc(100% - 20px);
+      margin-top: 18px;
+      margin-bottom: 60px;
+    }
+  
+    .profile {
+      grid-template-columns: 1fr;
+    }
+  
+    .impact {
+      min-height: 95px;
+    }
+  
+    .userCard {
+      gap: 12px;
+    }
+  
+    .avatar,
+    .avatarFallback {
+      flex-basis: 48px;
+      width: 48px;
+      height: 48px;
+    }
+  
+    .userInfo h1 {
+      font-size: 18px;
+    }
+  
+    .messageButton {
+      margin-left: 60px;
+    }
+  
+    .sectionHeading h2 {
+      font-size: 18px;
+    }
+  
+    .filterPanel {
+      position: fixed;
+      top: 90px;
+      right: 10px;
+      width: min(290px, calc(100vw - 20px));
+      max-height: calc(100vh - 110px);
+    }
+  
+    .cards {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+  
+    .photoPlaceholder,
+    .itemPhoto {
+      height: 230px;
+    }
+  }

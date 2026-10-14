@@ -1,9 +1,16 @@
+
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
+
+import {
+  getAuthErrorMessage,
+  registerUser,
+} from "@/shared/api/auth";
+import { saveAuthSession } from "../model/session";
 
 import {
   validateEmail,
@@ -16,34 +23,33 @@ import styles from "./AuthForm.module.css";
 export function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const from = searchParams.get("from") || "/";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agree, setAgree] = useState(false);
-
   const [showPassword, setShowPassword] = useState(false);
 
   const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [agreeError, setAgreeError] = useState("");
-
+  const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
     router.push(from);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setNameError("");
     setEmailError("");
     setPasswordError("");
     setAgreeError("");
+    setFormError("");
 
     const nextNameError = validateName(name);
     const nextEmailError = validateEmail(email);
@@ -68,17 +74,24 @@ export function RegisterForm() {
 
     setIsSubmitting(true);
 
-    /*
-     * Backend пока отсутствует.
-     * После прохождения frontend-валидации
-     * считаем регистрацию успешной.
-     *
-     * Позже здесь будет API-запрос регистрации.
-     */
+    try {
+      const result = await registerUser({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        personal_data_consent: agree,
+      });
 
-    router.push(
-      `/register/success?from=${encodeURIComponent(from)}`
-    );
+      saveAuthSession(result);
+
+      router.push(
+        `/register/success?from=${encodeURIComponent(from)}`,
+      );
+    } catch (error) {
+      setFormError(getAuthErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -95,23 +108,22 @@ export function RegisterForm() {
 
       <section className={styles.authContent}>
         <div className={styles.formWrapper}>
-            <div className={styles.authHeader}>
-                <button
-                    type="button"
-                    className={styles.backButton}
-                    onClick={handleBack}
-                    aria-label="Вернуться назад"
-                >
-                    <img src="/eva_arrow-back-fill.svg" alt="Назад" />
-                </button>
+          <div className={styles.authHeader}>
+            <button
+              type="button"
+              className={styles.backButton}
+              onClick={handleBack}
+              aria-label="Вернуться назад"
+            >
+              <img src="/eva_arrow-back-fill.svg" alt="Назад" />
+            </button>
 
-                <span className={styles.authTitle}>Регистрация</span>
-            </div>
+            <span className={styles.authTitle}>Регистрация</span>
+          </div>
 
           <form className={styles.form} onSubmit={handleSubmit}>
             <div className={styles.field}>
               <label htmlFor="register-name">Имя</label>
-
               <input
                 id="register-name"
                 type="text"
@@ -119,12 +131,12 @@ export function RegisterForm() {
                 onChange={(event) => {
                   setName(event.target.value);
                   setNameError("");
+                  setFormError("");
                 }}
                 placeholder="Введите ваше имя"
                 autoComplete="name"
                 className={nameError ? styles.inputError : ""}
               />
-
               {nameError && (
                 <span className={styles.error}>{nameError}</span>
               )}
@@ -132,7 +144,6 @@ export function RegisterForm() {
 
             <div className={styles.field}>
               <label htmlFor="register-email">E-mail</label>
-
               <input
                 id="register-email"
                 type="email"
@@ -140,12 +151,12 @@ export function RegisterForm() {
                 onChange={(event) => {
                   setEmail(event.target.value);
                   setEmailError("");
+                  setFormError("");
                 }}
                 placeholder="Введите e-mail"
                 autoComplete="email"
                 className={emailError ? styles.inputError : ""}
               />
-
               {emailError && (
                 <span className={styles.error}>{emailError}</span>
               )}
@@ -162,6 +173,7 @@ export function RegisterForm() {
                   onChange={(event) => {
                     setPassword(event.target.value);
                     setPasswordError("");
+                    setFormError("");
                   }}
                   placeholder="Придумайте пароль"
                   autoComplete="new-password"
@@ -171,21 +183,13 @@ export function RegisterForm() {
                 <button
                   type="button"
                   className={styles.eyeButton}
-                  onClick={() =>
-                    setShowPassword((previous) => !previous)
-                  }
+                  onClick={() => setShowPassword((previous) => !previous)}
                   aria-label={
-                    showPassword
-                      ? "Скрыть пароль"
-                      : "Показать пароль"
+                    showPassword ? "Скрыть пароль" : "Показать пароль"
                   }
                 >
                   <Image
-                    src={
-                      showPassword
-                        ? "/eye-close.svg"
-                        : "/eye.svg"
-                    }
+                    src={showPassword ? "/eye-close.svg" : "/eye.svg"}
                     alt=""
                     width={20}
                     height={20}
@@ -194,44 +198,47 @@ export function RegisterForm() {
               </div>
 
               {passwordError && (
-                <span className={styles.error}>
-                  {passwordError}
-                </span>
+                <span className={styles.error}>{passwordError}</span>
               )}
             </div>
 
             <label className={styles.agreement}>
-                <input
-                    type="checkbox"
-                    checked={agree}
-                    onChange={(event) => {
-                    setAgree(event.target.checked);
-                    setAgreeError("");
-                    }}
-                />
+              <input
+                type="checkbox"
+                checked={agree}
+                onChange={(event) => {
+                  setAgree(event.target.checked);
+                  setAgreeError("");
+                  setFormError("");
+                }}
+              />
 
-                <span className={styles.customCheckbox}>
-                    {agree && (
-                    <img
-                        src="/galochka.svg"
-                        alt=""
-                        className={styles.checkboxIcon}
-                    />
-                    )}
-                </span>
+              <span className={styles.customCheckbox}>
+                {agree && (
+                  <img
+                    src="/galochka.svg"
+                    alt=""
+                    className={styles.checkboxIcon}
+                  />
+                )}
+              </span>
 
-                <span className={styles.agreementText}>
-                    Я даю согласие на{" "}
-                    <span className={styles.agreementLink}>
-                    обработку персональных данных
-                    </span>
+              <span className={styles.agreementText}>
+                Я даю согласие на{" "}
+                <span className={styles.agreementLink}>
+                  обработку персональных данных
                 </span>
+              </span>
             </label>
 
             {agreeError && (
-              <span className={styles.error}>
-                {agreeError}
-              </span>
+              <span className={styles.error}>{agreeError}</span>
+            )}
+
+            {formError && (
+              <p role="alert" className={styles.error}>
+                {formError}
+              </p>
             )}
 
             <button
@@ -239,9 +246,7 @@ export function RegisterForm() {
               className={styles.submitButton}
               disabled={isSubmitting}
             >
-              {isSubmitting
-                ? "Создаем аккаунт..."
-                : "Зарегистрироваться"}
+              {isSubmitting ? "Создаем аккаунт..." : "Зарегистрироваться"}
             </button>
           </form>
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -5,35 +6,43 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-import { validateEmail, validatePassword } from "../model/validation";
+import {
+  getAuthErrorMessage,
+  loginUser,
+} from "@/shared/api/auth";
+import { saveAuthSession } from "../model/session";
+
+import {
+  validateEmail,
+  validatePassword,
+} from "../model/validation";
 
 import styles from "./AuthForm.module.css";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const from = searchParams.get("from") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-
+  const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
     router.push(from);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setEmailError("");
     setPasswordError("");
+    setFormError("");
 
     const nextEmailError = validateEmail(email);
     const nextPasswordError = validatePassword(password);
@@ -47,12 +56,21 @@ export function LoginForm() {
 
     setIsSubmitting(true);
 
-    // Backend пока отсутствует.
-    // Здесь позже будет запрос авторизации.
+    try {
+      const result = await loginUser({
+        email: email.trim(),
+        password,
+      });
 
-    setTimeout(() => {
+      saveAuthSession(result);
+
+      router.push(from);
+      router.refresh();
+    } catch (error) {
+      setFormError(getAuthErrorMessage(error));
+    } finally {
       setIsSubmitting(false);
-    }, 500);
+    }
   };
 
   return (
@@ -69,23 +87,22 @@ export function LoginForm() {
 
       <section className={styles.authContent}>
         <div className={styles.formWrapper}>
-            <div className={styles.authHeader}>
-                <button
-                    type="button"
-                    className={styles.backButton}
-                    onClick={handleBack}
-                    aria-label="Вернуться назад"
-                >
-                    <img src="/eva_arrow-back-fill.svg" alt="Назад" />
-                </button>
+          <div className={styles.authHeader}>
+            <button
+              type="button"
+              className={styles.backButton}
+              onClick={handleBack}
+              aria-label="Вернуться назад"
+            >
+              <img src="/eva_arrow-back-fill.svg" alt="Назад" />
+            </button>
 
-                <span className={styles.authTitle}>Вход</span>
-            </div>
-          
+            <span className={styles.authTitle}>Вход</span>
+          </div>
+
           <form className={styles.form} onSubmit={handleSubmit}>
             <div className={styles.field}>
               <label htmlFor="login-email">E-mail</label>
-
               <input
                 id="login-email"
                 type="email"
@@ -93,12 +110,12 @@ export function LoginForm() {
                 onChange={(event) => {
                   setEmail(event.target.value);
                   setEmailError("");
+                  setFormError("");
                 }}
                 placeholder="Введите e-mail"
                 autoComplete="email"
                 className={emailError ? styles.inputError : ""}
               />
-
               {emailError && (
                 <span className={styles.error}>{emailError}</span>
               )}
@@ -115,6 +132,7 @@ export function LoginForm() {
                   onChange={(event) => {
                     setPassword(event.target.value);
                     setPasswordError("");
+                    setFormError("");
                   }}
                   placeholder="Введите пароль"
                   autoComplete="current-password"
@@ -146,9 +164,18 @@ export function LoginForm() {
             <button
               type="button"
               className={styles.forgotPassword}
+              onClick={() => {
+                setFormError("Восстановление пароля пока не подключено.");
+              }}
             >
               Забыли пароль?
             </button>
+
+            {formError && (
+              <p role="alert" className={styles.error}>
+                {formError}
+              </p>
+            )}
 
             <button
               type="submit"
