@@ -1,0 +1,16 @@
+.page {
+    min-height: calc(100vh - 60px);
+    padding: 22px 0 64px;
+    background: #fbfaf2;
+  }
+  
+  .catalog {
+    width: 100%;
+    min-width: 0;
+  }
+  
+  .results {
+    position: relative;
+    z-index: 1;
+  }
+  

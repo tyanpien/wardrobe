@@ -68,6 +68,11 @@ export function ItemCard({ item }: ItemCardProps) {
 
       <p className={styles.description}>{item.description}</p>
 
+      <span className={styles.locationPin} title={item.city}>
+          <img src='/location.svg' alt="" />
+          {item.city}
+      </span>
+
       <div className={styles.tags}>
         <span className={styles.darkTag}>
           {TRANSFER_TYPE_LABELS[item.transferType]}
@@ -84,7 +89,6 @@ export function ItemCard({ item }: ItemCardProps) {
         <span>{ITEM_CONDITION_LABELS[item.condition]}</span>
       </div>
 
-      <p className={styles.meta}>{item.city}</p>
     </article>
   );
 }

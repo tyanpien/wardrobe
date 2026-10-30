@@ -1,0 +1,387 @@
+.page {
+    width: min(100% - 48px, 1300px);
+    margin: 0 0 0 70px;
+    padding: 36px 0 64px;
+    color: #202020;
+  }
+  
+  .pageHeading {
+    display: flex;
+    align-items: center;
+    margin-left: 16px;
+    gap: 58px;
+    margin-bottom: 32px;
+  }
+  
+  .pageHeading h1 {
+    font-size: 24px;
+    line-height: 1.3;
+    font-weight: 700;
+  }
+  
+  .backButton {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: clamp(44px, 9vw, 108px);
+    padding: 0 24px 0 20px;
+  }
+  
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+    min-width: 0;
+  }
+  
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  .field > span,
+  .choiceGroup legend {
+    font-size: 16px;
+    margin-left: 14px;
+    font-weight: 400;
+  }
+  
+
+  .field input:not([type="file"]),
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    min-height: 42px;
+    border: none;
+    border-bottom: 1px solid #1C1C1C;
+    border-radius: 0 0 8px 8px;
+    outline: none;
+    padding: 10px 14px;
+    background-color: transparent;
+    color: #1C1C1C;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+  }
+    
+  .field input::placeholder,
+  .field textarea::placeholder {
+    color: #96958f;
+    opacity: 1;
+  }
+  
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    border-bottom: 2px solid #202020;
+  }
+  
+  .field select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8'%3E%3Cpath d='m1 1 6 5 6-5' fill='none' stroke='%231C1C1C' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    cursor: pointer;
+  }
+  
+  
+  .field select:disabled {
+    color: #96958f;
+    cursor: not-allowed;
+  }
+  
+  .descriptionField textarea {
+    min-height: 100px;
+    resize: vertical;
+    border: 0;
+    border-right: 1px solid #77756f;
+    border-bottom: 1px solid #77756f;
+    border-radius: 0 0 9px 9px;
+    padding-top: 4px;
+  }
+  
+  .choiceGroup {
+    border: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  
+  .choiceGroup legend {
+    margin-bottom: 18px;
+  }
+  
+  .radioOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-left: 14px;
+  }
+  
+  .conditionOptions {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    gap: 12px 28px;
+    margin-left: 14px;
+  }
+  
+  .radioLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 18px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  
+  .radioLabel input {
+    appearance: none;
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    border: 1.5px solid #292929;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+  }
+  
+  .radioLabel input:checked {
+    border: 3.8px solid #202020;
+    background: #d5ee9c;
+  }
+  
+  .dropZone {
+    min-height: 192px;
+    border: 2px dashed #442F38;
+    border-radius: 7px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px 12px;
+    text-align: center;
+  }
+  
+  .hiddenInput {
+    display: none;
+  }
+  
+  .addPhotoButton,
+  .publishButton {
+    border: 0;
+    border-radius: 10px;
+    background: #202020;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  
+  .addPhotoButton {
+    min-width: 168px;
+    padding: 11px 18px;
+  }
+  
+  .addPhotoButton:hover,
+  .publishButton:hover {
+    background: #414141;
+  }
+  
+  .addPhotoButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .dropZone p {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  
+  .dropZone small {
+    color: #77756f;
+    font-size: 10px;
+    font-style: italic;
+  }
+  
+  .photoGrid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  
+  .photoPreview {
+    position: relative;
+    min-width: 0;
+    aspect-ratio: 1;
+    border-radius: 7px;
+    overflow: hidden;
+    background: #e8e3dc;
+  }
+  
+  .photoPreview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .photoPreview button {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(32, 32, 32, 0.85);
+    color: #fff;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  
+  .photoPreview > span {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 2px;
+    background: rgba(32, 32, 32, 0.75);
+    color: white;
+    text-align: center;
+    font-size: 10px;
+  }
+  
+  .submitRow {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+  
+  .publishButton {
+    min-width: 142px;
+    padding: 12px 24px;
+  }
+  
+  .error {
+    color: #a33131;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  
+  .successPanel {
+    max-width: 560px;
+    margin: 64px auto;
+    padding: 48px 32px;
+    border-radius: 12px;
+    background: #fff;
+    text-align: center;
+    box-shadow: 0 8px 28px rgba(32, 32, 32, 0.06);
+  }
+  
+  .successIcon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: #d5ee9c;
+    font-size: 28px;
+  }
+  
+  .successPanel h1 {
+    margin-bottom: 12px;
+    font-size: 24px;
+  }
+  
+  .successPanel p {
+    color: #6d6861;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  
+  .successActions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+  }
+  
+  .backToForm {
+    padding: 12px 18px;
+    border: 1px solid #202020;
+    border-radius: 10px;
+    background: transparent;
+    color: #202020;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  
+  @media (max-width: 760px) {
+    .page {
+      width: min(100% - 32px, 560px);
+      padding-top: 26px;
+    }
+  
+    .pageHeading {
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+  
+    .form {
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 0;
+    }
+  
+    .column {
+      gap: 24px;
+    }
+  
+    .conditionOptions {
+      gap: 14px 20px;
+    }
+  
+    .dropZone {
+      min-height: 180px;
+    }
+  }
+  
+  @media (max-width: 420px) {
+    .pageHeading h1 {
+      font-size: 18px;
+    }
+  
+    .conditionOptions {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 8px;
+    }
+  
+    .radioLabel {
+      gap: 8px;
+      white-space: normal;
+    }
+  
+    .photoGrid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  

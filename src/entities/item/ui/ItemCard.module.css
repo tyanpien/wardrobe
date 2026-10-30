@@ -71,6 +71,23 @@
   min-height: 42px;
 }
 
+.locationPin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  color: #1C1C1C;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.locationPin img {
+  display: block;
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
 .tags {
   display: flex;
   flex-wrap: wrap;

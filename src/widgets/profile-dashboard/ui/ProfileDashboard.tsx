@@ -160,6 +160,26 @@ export function ProfileDashboard() {
   });
 
   const [profileError, setProfileError] = useState("");
+  const [createdAds, setCreatedAds] = useState<Ad[]>([]);
+  const [adsError, setAdsError] = useState("");
+
+  useEffect(() => {
+    function readCreatedAds() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("dobry-shkaf-created-ads") || "[]") as Ad[];
+        setCreatedAds(saved);
+      } catch {
+        setCreatedAds([]);
+      }
+    }
+    readCreatedAds();
+    window.addEventListener("focus", readCreatedAds);
+    window.addEventListener("dobry-shkaf-ads-updated", readCreatedAds);
+    return () => {
+      window.removeEventListener("focus", readCreatedAds);
+      window.removeEventListener("dobry-shkaf-ads-updated", readCreatedAds);
+    };
+  }, []);
   const statusFilterRef = useRef<HTMLDivElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
 
@@ -246,7 +266,7 @@ export function ProfileDashboard() {
   const [tab, setTab] = useState<"ads" | "history" | "volunteer">("ads");
   const [status, setStatus] = useState<Status | "">("");
   const [transfer, setTransfer] = useState<Transfer[]>(["exchange", "free"]);
-  const [category, setCategory] = useState<Category | "">("shoes");
+  const [category, setCategory] = useState<Category | "">("");
   const [subcategory, setSubcategory] = useState<string[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([
     "new",
@@ -257,22 +277,45 @@ export function ProfileDashboard() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
 
-  const ads = useMemo(
-    () =>
-      initialAds.filter(
-        (ad) =>
-          (!status || ad.status === status) &&
-          (transfer.length === 0 || transfer.includes(ad.transfer)) &&
-          (!category || ad.category === category) &&
-          (subcategory.length === 0 ||
-            subcategory.includes(ad.subcategory)) &&
-          (conditions.length === 0 ||
-            conditions.includes(ad.condition)) &&
-          (tab !== "history" || ad.status === "transferred") &&
-          (tab !== "ads" || ad.status !== "transferred"),
-      ),
-    [status, transfer, category, subcategory, conditions, tab],
-  );
+  const ads = useMemo(() => {
+    const adsById = new Map<number, Ad>();
+    initialAds.forEach((ad) => adsById.set(ad.id, ad));
+    createdAds.forEach((ad) => adsById.set(ad.id, ad));
+
+    return [...adsById.values()].filter(
+      (ad) =>
+        (!status || ad.status === status) &&
+        (transfer.length === 0 || transfer.includes(ad.transfer)) &&
+        (!category || ad.category === category) &&
+        (subcategory.length === 0 || subcategory.includes(ad.subcategory)) &&
+        (conditions.length === 0 || conditions.includes(ad.condition)) &&
+        (tab !== "history" || ad.status === "transferred") &&
+        (tab !== "ads" || ad.status !== "transferred"),
+    );
+  }, [createdAds, status, transfer, category, subcategory, conditions, tab]);
+
+  function unpublishAd(ad: Ad) {
+    if (ad.status !== "published") return;
+
+    try {
+      const storageKey = "dobry-shkaf-created-ads";
+      const savedAds = JSON.parse(localStorage.getItem(storageKey) || "[]") as Ad[];
+      const updatedAd: Ad = { ...ad, status: "unpublished" };
+      const alreadySaved = savedAds.some((savedAd) => savedAd.id === ad.id);
+      const updatedAds = alreadySaved
+        ? savedAds.map((savedAd) =>
+            savedAd.id === ad.id ? { ...savedAd, status: "unpublished" as const } : savedAd,
+          )
+        : [updatedAd, ...savedAds];
+
+      localStorage.setItem(storageKey, JSON.stringify(updatedAds));
+      setCreatedAds(updatedAds);
+      setAdsError("");
+      window.dispatchEvent(new Event("dobry-shkaf-ads-updated"));
+    } catch {
+      setAdsError("Не удалось изменить статус объявления. Попробуйте ещё раз.");
+    }
+  }
 
   function toggleValue<T extends string>(
     value: T,
@@ -327,9 +370,8 @@ export function ProfileDashboard() {
         </div>
       </section>
 
-      {profileError && (
-        <p role="alert">{profileError}</p>
-      )}
+      {profileError && <p role="alert">{profileError}</p>}
+      {adsError && <p role="alert">{adsError}</p>}
 
       <nav className={styles.tabs} aria-label="Разделы профиля">
         <button
@@ -358,7 +400,7 @@ export function ProfileDashboard() {
 
         <span className={styles.tabSpacer} />
 
-        <Link href="/my-items" className={styles.createButton}>
+        <Link href="/my-items/create" className={styles.createButton}>
           Создать объявление
         </Link>
       </nav>
@@ -558,10 +600,10 @@ export function ProfileDashboard() {
 
                         <button
                           type="button"
-                          disabled={ad.status === "unpublished"}
+                          disabled={ad.status !== "published"}
                           onClick={() => {
                             setActiveAdMenu(null);
-                            // потом подключить изменение статуса объявления
+                            unpublishAd(ad);
                           }}
                         >
                           Снять с публикации
