@@ -1,4 +1,5 @@
 "use client";
+
 import { CategorySelect } from "@/shared/ui/CategorySelect/CategorySelect";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -8,32 +9,28 @@ import {
   getMyProfile,
   getProfileErrorMessage,
 } from "@/entities/user/api/profile";
+import type {
+  Item,
+  ItemCategory,
+  ItemCondition,
+  ItemStatus,
+} from "@/entities/item";
+import {
+  CATEGORY_OPTIONS,
+  ITEM_CATEGORY_LABELS,
+  ITEM_CONDITION_LABELS,
+  ITEM_STATUS_LABELS,
+  fetchMyListings,
+  getListingErrorMessage,
+  getSubcategoryOptions,
+  subcategoryLabel,
+  unpublishListing,
+} from "@/entities/item";
 
 type Transfer = "exchange" | "free";
-type Status = "published" | "in_transfer" | "transferred" | "unpublished";
-
-type Category =
-  | "clothing"
-  | "shoes"
-  | "accessories"
-  | "home_textile"
-  | "kids"
-  | "other";
-
-type Condition = "new" | "excellent" | "good" | "needs_repair";
-
-type Ad = {
-  id: number;
-  title: string;
-  description: string;
-  transfer: Transfer;
-  category: Category;
-  subcategory: string;
-  condition: Condition;
-  status: Status;
-  city: string;
-  photo?: string;
-};
+type Status = ItemStatus;
+type Category = ItemCategory;
+type Condition = ItemCondition;
 
 type ProfileData = {
   name: string;
@@ -42,114 +39,9 @@ type ProfileData = {
   about: string;
 };
 
-const categoryLabels: Record<Category, string> = {
-  clothing: "Одежда",
-  shoes: "Обувь",
-  accessories: "Аксессуары",
-  home_textile: "Домашний текстиль",
-  kids: "Детские вещи",
-  other: "Другое",
-};
-
-const subcategories: Record<Category, string[]> = {
-  clothing: [
-    "Верхняя одежда",
-    "Футболки и топы",
-    "Рубашки и блузки",
-    "Свитеры и толстовки",
-    "Брюки и джинсы",
-    "Платья и юбки",
-    "Спортивная одежда",
-    "Домашняя одежда",
-  ],
-  shoes: ["Демисезонная", "Спортивная", "Зимняя", "Летняя"],
-  accessories: [
-    "Сумки и рюкзаки",
-    "Головные уборы",
-    "Шарфы и перчатки",
-    "Ремни",
-  ],
-  home_textile: [
-    "Постельное белье",
-    "Полотенца",
-    "Пледы и одеяла",
-    "Шторы",
-  ],
-  kids: [
-    "Детская одежда",
-    "Детская обувь",
-    "Одежда для новорожденных",
-    "Игрушки",
-    "Детские книги",
-    "Товары для ухода за ребенком",
-    "Детский текстиль",
-  ],
-  other: ["Другое"],
-};
-
-const statusLabels: Record<Status, string> = {
-  published: "Опубликовано",
-  in_transfer: "В процессе передачи",
-  transferred: "Передано",
-  unpublished: "Снято с публикации",
-};
-
-const conditionLabels: Record<Condition, string> = {
-  new: "Новое",
-  excellent: "Отличное",
-  good: "Хорошее",
-  needs_repair: "Требует ремонта",
-};
-
-const initialAds: Ad[] = [
-  {
-    id: 1,
-    title: "Заголовок объявления",
-    description:
-      "Описание объявленияОписание объявления Описание объявления Описание объявления",
-    transfer: "exchange",
-    category: "shoes",
-    subcategory: "Демисезонная",
-    condition: "good",
-    status: "in_transfer",
-    city: "Екатеринбург",
-  },
-  {
-    id: 2,
-    title: "Заголовок объявления",
-    description:
-      "Описание объявленияОписание объявления Описание объявления Описание объявления",
-    transfer: "free",
-    category: "clothing",
-    subcategory: "Верхняя одежда",
-    condition: "excellent",
-    status: "published",
-    city: "Екатеринбург",
-  },
-  {
-    id: 3,
-    title: "Заголовок объявления",
-    description:
-      "Описание объявленияОписание объявления Описание объявления Описание объявления",
-    transfer: "exchange",
-    category: "kids",
-    subcategory: "Детская одежда",
-    condition: "new",
-    status: "unpublished",
-    city: "Екатеринбург",
-  },
-  {
-    id: 4,
-    title: "Пальто",
-    description: "Теплое пальто, аккуратное состояние.",
-    transfer: "free",
-    category: "clothing",
-    subcategory: "Верхняя одежда",
-    condition: "good",
-    status: "transferred",
-    city: "Екатеринбург",
-  },
-];
+const categoryLabels = ITEM_CATEGORY_LABELS;
+const statusLabels = ITEM_STATUS_LABELS;
+const conditionLabels = ITEM_CONDITION_LABELS;
 
 export function ProfileDashboard() {
   const [profile, setProfile] = useState<ProfileData>({
@@ -160,28 +52,27 @@ export function ProfileDashboard() {
   });
 
   const [profileError, setProfileError] = useState("");
-  const [createdAds, setCreatedAds] = useState<Ad[]>([]);
+  const [ads, setAds] = useState<Item[]>([]);
   const [adsError, setAdsError] = useState("");
+  const [adsLoading, setAdsLoading] = useState(true);
 
-  useEffect(() => {
-    function readCreatedAds() {
-      try {
-        const saved = JSON.parse(localStorage.getItem("dobry-shkaf-created-ads") || "[]") as Ad[];
-        setCreatedAds(saved);
-      } catch {
-        setCreatedAds([]);
-      }
-    }
-    readCreatedAds();
-    window.addEventListener("focus", readCreatedAds);
-    window.addEventListener("dobry-shkaf-ads-updated", readCreatedAds);
-    return () => {
-      window.removeEventListener("focus", readCreatedAds);
-      window.removeEventListener("dobry-shkaf-ads-updated", readCreatedAds);
-    };
-  }, []);
   const statusFilterRef = useRef<HTMLDivElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
+
+  const [activeAdMenu, setActiveAdMenu] = useState<string | null>(null);
+  const [tab, setTab] = useState<"ads" | "history" | "volunteer">("ads");
+  const [status, setStatus] = useState<Status | "">("");
+  const [transfer, setTransfer] = useState<Transfer[]>(["exchange", "free"]);
+  const [category, setCategory] = useState<Category | "">("");
+  const [subcategory, setSubcategory] = useState<string[]>([]);
+  const [conditions, setConditions] = useState<Condition[]>([
+    "new",
+    "excellent",
+    "good",
+    "needs_repair",
+  ]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -262,58 +153,94 @@ export function ProfileDashboard() {
     };
   }, []);
 
-  const [activeAdMenu, setActiveAdMenu] = useState<number | null>(null);
-  const [tab, setTab] = useState<"ads" | "history" | "volunteer">("ads");
-  const [status, setStatus] = useState<Status | "">("");
-  const [transfer, setTransfer] = useState<Transfer[]>(["exchange", "free"]);
-  const [category, setCategory] = useState<Category | "">("");
-  const [subcategory, setSubcategory] = useState<string[]>([]);
-  const [conditions, setConditions] = useState<Condition[]>([
-    "new",
-    "excellent",
-    "good",
-    "needs_repair",
-  ]);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
 
-  const ads = useMemo(() => {
-    const adsById = new Map<number, Ad>();
-    initialAds.forEach((ad) => adsById.set(ad.id, ad));
-    createdAds.forEach((ad) => adsById.set(ad.id, ad));
+    async function loadAds() {
+      setAdsLoading(true);
+      setAdsError("");
 
-    return [...adsById.values()].filter(
-      (ad) =>
-        (!status || ad.status === status) &&
-        (transfer.length === 0 || transfer.includes(ad.transfer)) &&
-        (!category || ad.category === category) &&
-        (subcategory.length === 0 || subcategory.includes(ad.subcategory)) &&
-        (conditions.length === 0 || conditions.includes(ad.condition)) &&
-        (tab !== "history" || ad.status === "transferred") &&
-        (tab !== "ads" || ad.status !== "transferred"),
-    );
-  }, [createdAds, status, transfer, category, subcategory, conditions, tab]);
+      try {
+        const statuses: ItemStatus[] | undefined =
+          tab === "history"
+            ? ["transferred"]
+            : status
+              ? [status]
+              : undefined;
 
-  function unpublishAd(ad: Ad) {
+        const response = await fetchMyListings({
+          category: category || undefined,
+          subcategory:
+            subcategory.length === 1 ? subcategory[0] : undefined,
+          conditions:
+            conditions.length > 0 && conditions.length < 4
+              ? conditions
+              : undefined,
+          transferTypes: transfer.length > 0 ? transfer : undefined,
+          statuses,
+          page: 1,
+          pageSize: 100,
+        });
+
+        if (cancelled) return;
+
+        let nextItems = response.items;
+
+        if (subcategory.length > 1) {
+          nextItems = nextItems.filter(
+            (item) =>
+              item.subcategory && subcategory.includes(item.subcategory),
+          );
+        }
+
+        if (tab === "ads") {
+          nextItems = nextItems.filter((item) => item.status !== "transferred");
+        }
+
+        if (transfer.length > 0 && transfer.length < 2) {
+          nextItems = nextItems.filter((item) =>
+            transfer.includes(item.transferType as Transfer),
+          );
+        }
+
+        setAds(nextItems);
+      } catch (error) {
+        if (cancelled) return;
+        setAds([]);
+        setAdsError(getListingErrorMessage(error));
+      } finally {
+        if (!cancelled) setAdsLoading(false);
+      }
+    }
+
+    void loadAds();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status, transfer, category, subcategory, conditions, tab]);
+
+  const subcategoryOptions = useMemo(
+    () => (category ? getSubcategoryOptions(category) : []),
+    [category],
+  );
+
+  async function unpublishAd(ad: Item) {
     if (ad.status !== "published") return;
 
     try {
-      const storageKey = "dobry-shkaf-created-ads";
-      const savedAds = JSON.parse(localStorage.getItem(storageKey) || "[]") as Ad[];
-      const updatedAd: Ad = { ...ad, status: "unpublished" };
-      const alreadySaved = savedAds.some((savedAd) => savedAd.id === ad.id);
-      const updatedAds = alreadySaved
-        ? savedAds.map((savedAd) =>
-            savedAd.id === ad.id ? { ...savedAd, status: "unpublished" as const } : savedAd,
-          )
-        : [updatedAd, ...savedAds];
-
-      localStorage.setItem(storageKey, JSON.stringify(updatedAds));
-      setCreatedAds(updatedAds);
+      const updated = await unpublishListing(ad.id);
+      setAds((current) =>
+        current.map((item) => (item.id === ad.id ? { ...item, ...updated } : item)),
+      );
       setAdsError("");
-      window.dispatchEvent(new Event("dobry-shkaf-ads-updated"));
-    } catch {
-      setAdsError("Не удалось изменить статус объявления. Попробуйте ещё раз.");
+    } catch (error) {
+      setAdsError(
+        getListingErrorMessage(
+          error,
+          "Не удалось изменить статус объявления. Попробуйте ещё раз.",
+        ),
+      );
     }
   }
 
@@ -505,33 +432,33 @@ export function ProfileDashboard() {
 
                   <CategorySelect<Category>
                     value={category}
-                    options={(Object.keys(categoryLabels) as Category[]).map((key) => ({
-                      value: key,
-                      label: categoryLabels[key],
+                    options={CATEGORY_OPTIONS.map((item) => ({
+                      value: item.value,
+                      label: item.label,
                     }))}
                     placeholder="Все категории"
                     onChange={(value) => {
                       setCategory(value);
+                      setSubcategory([]);
                     }}
                   />
 
-                  {category &&
-                    subcategories[category].map((name) => (
-                      <label className={styles.checkRow} key={name}>
-                        <input
-                          type="checkbox"
-                          checked={subcategory.includes(name)}
-                          onChange={() =>
-                            toggleValue(name, subcategory, setSubcategory)
-                          }
-                        />
-                        <span
-                          className={styles.checkboxMark}
-                          aria-hidden="true"
-                        />
-                        <span>{name}</span>
-                      </label>
-                    ))}
+                  {subcategoryOptions.map((item) => (
+                    <label className={styles.checkRow} key={item.value}>
+                      <input
+                        type="checkbox"
+                        checked={subcategory.includes(item.value)}
+                        onChange={() =>
+                          toggleValue(item.value, subcategory, setSubcategory)
+                        }
+                      />
+                      <span
+                        className={styles.checkboxMark}
+                        aria-hidden="true"
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  ))}
 
                   <div className={styles.filterHeading}>Состояние</div>
 
@@ -562,97 +489,121 @@ export function ProfileDashboard() {
           </div>
 
           <section className={styles.cards} aria-label="Объявления">
-            {ads.map((ad) => (
-              <article className={styles.adCard} key={ad.id}>
-                <div className={styles.photoArea}>
-                  <span
-                    className={`${styles.statusBadge} ${styles[ad.status]}`}
-                  >
-                    {statusLabels[ad.status]}
-                  </span>
+            {adsLoading && <p>Загрузка объявлений...</p>}
 
-                  <div className={styles.adActions}>
-                    <button
-                      type="button"
-                      className={styles.moreButton}
-                      aria-label="Действия с объявлением"
-                      aria-expanded={activeAdMenu === ad.id}
-                      onClick={() =>
-                        setActiveAdMenu((current) =>
-                          current === ad.id ? null : ad.id,
-                        )
-                      }
+            {!adsLoading &&
+              ads.map((ad) => (
+                <article
+                  className={styles.adCard}
+                  key={ad.id}
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => {
+                    window.location.href = `/catalog/${ad.id}`;
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      window.location.href = `/catalog/${ad.id}`;
+                    }
+                  }}
+                >
+                  <div className={styles.photoArea}>
+                    <span
+                      className={`${styles.statusBadge} ${styles[ad.status]}`}
                     >
-                      •••
-                    </button>
+                      {statusLabels[ad.status]}
+                    </span>
 
-                    {activeAdMenu === ad.id && (
-                      <div className={styles.adActionsMenu}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveAdMenu(null);
-                            window.location.href = `/my-items/edit/${ad.id}`;
-                          }}
-                        >
-                          Редактировать
-                        </button>
+                    <div className={styles.adActions}>
+                      <button
+                        type="button"
+                        className={styles.moreButton}
+                        aria-label="Действия с объявлением"
+                        aria-expanded={activeAdMenu === ad.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setActiveAdMenu((current) =>
+                            current === ad.id ? null : ad.id,
+                          );
+                        }}
+                      >
+                        •••
+                      </button>
 
-                        <button
-                          type="button"
-                          disabled={ad.status !== "published"}
-                          onClick={() => {
-                            setActiveAdMenu(null);
-                            unpublishAd(ad);
-                          }}
-                        >
-                          Снять с публикации
-                        </button>
-                      </div>
+                      {activeAdMenu === ad.id && (
+                        <div className={styles.adActionsMenu}>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveAdMenu(null);
+                              window.location.href = `/my-items/edit/${ad.id}`;
+                            }}
+                          >
+                            Редактировать
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={ad.status !== "published"}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveAdMenu(null);
+                              void unpublishAd(ad);
+                            }}
+                          >
+                            Снять с публикации
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {ad.photoUrls[0] || ad.coverUrl ? (
+                      <img
+                        src={ad.photoUrls[0] || ad.coverUrl || ""}
+                        alt={ad.title}
+                        className={styles.itemPhoto}
+                      />
+                    ) : (
+                      <div className={styles.photoPlaceholder} />
                     )}
+
+                    <div className={styles.dots} aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                    </div>
                   </div>
 
-                  {ad.photo ? (
-                    <img
-                      src={ad.photo}
-                      alt={ad.title}
-                      className={styles.itemPhoto}
-                    />
-                  ) : (
-                    <div className={styles.photoPlaceholder} />
-                  )}
-
-                  <div className={styles.dots} aria-hidden="true">
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                  </div>
-                </div>
-
-                <div className={styles.cardBody}>
-                  <h2>{ad.title}</h2>
-                  <p className={styles.description}>{ad.description}</p>
+                  <div className={styles.cardBody}>
+                    <h2>{ad.title}</h2>
+                    <p className={styles.description}>{ad.description}</p>
 
                     <span className={styles.locationPin} title={ad.city}>
-                        <img src='/location.svg' alt="" />
-                        {ad.city}
+                      <img src="/location.svg" alt="" />
+                      {ad.city}
                     </span>
 
-                  <div className={styles.tags}>
-                    <span className={styles.darkTag}>
-                      {ad.transfer === "exchange" ? "Обмен" : "Бесплатно"}
-                    </span>
-                    <span>{categoryLabels[ad.category]}</span>
-                    <span>{ad.subcategory}</span>
-                    <span>{conditionLabels[ad.condition]}</span>
+                    <div className={styles.tags}>
+                      <span className={styles.darkTag}>
+                        {ad.transferType === "exchange" ? "Обмен" : "Бесплатно"}
+                      </span>
+                      <span>{categoryLabels[ad.category]}</span>
+                      {ad.subcategory ? (
+                        <span>
+                          {subcategoryLabel(ad.category, ad.subcategory)}
+                        </span>
+                      ) : null}
+                      <span>{conditionLabels[ad.condition]}</span>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
 
-            {ads.length === 0 && (
+            {!adsLoading && ads.length === 0 && (
               <p className={styles.noResults}>
                 По выбранным фильтрам объявлений нет.
               </p>

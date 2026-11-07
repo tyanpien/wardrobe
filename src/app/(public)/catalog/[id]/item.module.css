@@ -1,10 +1,432 @@
-.layout {
-  display: grid;
-  gap: 16px;
+.page {
+  min-height: calc(100vh - 140px);
+  padding: 54px 0 96px;
+  background: #fbfaf0;
+  color: #1f1f1f;
 }
 
-.actions {
+.layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) minmax(460px, 1.08fr);
+  gap: clamp(38px, 4vw, 64px);
+  align-items: start;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.galleryColumn {
+  position: relative;
+  min-width: 0;
+  padding-left: 0;
+}
+
+.backButton {
+  position: absolute;
+  z-index: 2;
+  left: -62px;
+  top: 4px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+}
+
+.backButton img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.gallery {
+  position: relative;
+  width: 100%;
+  height: 460px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 15px;
+  background: #fff;
+}
+
+.mainPhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.photoPlaceholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #96948d;
+  font-size: 15px;
+  background: #f0eee4;
+}
+
+.galleryArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: #e6f8a2;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.previous { left: 18px; }
+.next { right: 18px; }
+
+.thumbnails {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  overflow-x: auto;
+  padding: 2px 2px 5px;
+}
+
+.thumbnail {
+  flex: 0 0 94px;
+  height: 76px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #e8e5dc;
+  cursor: pointer;
+}
+
+.thumbnailActive {
+  border-color: #49333e;
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.details {
+  min-width: 0;
+  padding-top: 0;
+}
+
+.titleRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+}
+
+.titleRow h1 {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: clamp(27px, 2.2vw, 36px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.unpublishedBadge {
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #e9e6dc;
+  color: #6b675e;
+  font-size: 13px;
+}
+
+.transferNotice {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  min-height: 88px;
+  margin: 36px 0 27px;
+  padding: 15px 27px;
+  border-radius: 19px;
+  background: #f5f8df;
+}
+
+.transferTag {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 81px;
+  min-height: 45px;
+  padding: 0 13px;
+  border-radius: 9px;
+  background: #49323e;
+  color: #fff;
+  font-size: 17px;
+}
+
+.freeBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  margin-top: 18px;
+  margin-bottom: 27px;
+  padding: 10px 15px;
+
+  background: #442F38;
+  border-radius: 8px;
+
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.noticeChevron {
+  color: #6e6265;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.transferNotice p {
+  color: #5d5b55;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.noticeLabel {
+  color: #77756d;
+}
+
+.meta {
+  display: grid;
+  gap: 17px;
+  margin: 0;
+}
+
+.meta div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.meta dt {
+  color: #a09e94;
+}
+
+.meta dd {
+  color: #292929;
+  font-weight: 500;
+}
+
+.descriptionBlock {
+  margin-top: 38px;
+}
+
+.descriptionBlock h2 {
+  margin: 0 0 20px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.descriptionBlock p {
+  color: #282828;
+  font-size: 17px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  width: 522px;
+}
+
+.sellerCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: fit-content;
+  min-width: min(100%, 375px);
+  min-height: 83px;
+  margin-top: 18px;
+  padding: 13px 27px;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.sellerAvatar {
+  flex: 0 0 55px;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #9d9c93;
+}
+
+.ownerActions {
+  width: 100%;
+  max-width: 500px;
+  margin-top: 18px;
+  padding: 0;
+  background: transparent;
+}
+
+.sellerName {
+  flex: 1;
+  min-width: 65px;
+  color: #202020;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.messageButton {
+  flex: 0 0 156px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 13px;
+  background: #1d1d1d;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+.messageButton:hover {
+  background: #49323e;
+}
+
+.report {
+  margin-top: 18px;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(320px, .9fr) minmax(360px, 1.1fr);
+    gap: 30px;
+  }
+
+  .backButton {
+    left: -45px;
+  }
+
+  .gallery {
+    height: 420px;
+  }
+}
+
+@media (max-width: 820px) {
+  .page {
+    padding: 28px 0 60px;
+  }
+
+  .freeBadge {
+    margin-top: 14px;
+    margin-bottom: 24px;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+
+  .galleryColumn {
+    padding-top: 42px;
+  }
+
+  .backButton {
+    left: 0;
+    top: 0;
+  }
+
+  .gallery {
+    height: min(112vw, 520px);
+  }
+
+  .details {
+    padding: 0 2px;
+  }
+
+  .transferNotice {
+    margin-top: 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    padding-top: 18px;
+  }
+
+  .layout {
+    gap: 26px;
+  }
+
+  .gallery {
+    height: 380px;
+    border-radius: 12px;
+  }
+
+  .thumbnails {
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .thumbnail {
+    flex-basis: 75px;
+    height: 66px;
+  }
+
+  .titleRow h1 {
+    font-size: 26px;
+  }
+
+  .transferNotice {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .transferTag {
+    min-width: 72px;
+    min-height: 40px;
+    font-size: 15px;
+  }
+
+  .transferNotice p {
+    font-size: 13px;
+  }
+
+  .meta div {
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .descriptionBlock {
+    margin-top: 28px;
+  }
+
+  .descriptionBlock p {
+    font-size: 15px;
+  }
+
+  .sellerCard {
+    width: 100%;
+    min-width: 0;
+    gap: 11px;
+    padding: 12px;
+  }
+
+  .sellerAvatar {
+    flex-basis: 46px;
+    width: 46px;
+    height: 46px;
+  }
+
+  .messageButton {
+    flex-basis: 120px;
+    min-height: 47px;
+    font-size: 14px;
+  }
 }

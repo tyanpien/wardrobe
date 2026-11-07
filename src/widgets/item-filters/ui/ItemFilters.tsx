@@ -4,76 +4,27 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Item } from "@/entities/item";
 import {
-  ITEM_CATEGORY_LABELS,
+  CATALOG_TRANSFER_OPTIONS,
+  CATEGORY_OPTIONS,
   ITEM_CONDITION_LABELS,
-  TRANSFER_TYPE_LABELS,
+  getSubcategoryOptions,
 } from "@/entities/item";
+import { getCities } from "@/entities/user/api/profile";
 import type { CatalogFilters } from "../model/types";
 import styles from "./ItemFilters.module.css";
 
 export type ItemFiltersProps = {
   items: Item[];
+  totalCount?: number;
   onApply: (filters: CatalogFilters) => void;
   onSearch: (query: string) => void;
-};
-
-const subcategories: Record<string, { value: string; label: string }[]> = {
-  clothing: [
-    { value: "outerwear", label: "Верхняя одежда" },
-    { value: "tshirts_tops", label: "Футболки и топы" },
-    { value: "shirts_blouses", label: "Рубашки и блузки" },
-    { value: "sweaters_hoodies", label: "Свитеры и толстовки" },
-    { value: "pants_jeans", label: "Брюки и джинсы" },
-    { value: "dresses_skirts", label: "Платья и юбки" },
-    { value: "sportswear", label: "Спортивная одежда" },
-    { value: "homewear", label: "Домашняя одежда" },
-  ],
-  shoes: [
-    { value: "shoes_demi", label: "Демисезонная" },
-    { value: "shoes_sport", label: "Спортивная" },
-    { value: "shoes_winter", label: "Зимняя" },
-    { value: "shoes_summer", label: "Летняя" },
-  ],
-  accessories: [
-    { value: "bags_backpacks", label: "Сумки и рюкзаки" },
-    { value: "hats", label: "Головные уборы" },
-    { value: "scarves_gloves", label: "Шарфы и перчатки" },
-    { value: "belts", label: "Ремни" },
-  ],
-  home_textile: [
-    { value: "bedding", label: "Постельное белье" },
-    { value: "towels", label: "Полотенца" },
-    { value: "blankets", label: "Пледы и одеяла" },
-    { value: "curtains", label: "Шторы" },
-  ],
-  kids: [
-    { value: "kids_clothing", label: "Детская одежда" },
-    { value: "kids_shoes", label: "Детская обувь" },
-    { value: "newborn_clothing", label: "Одежда для новорожденных" },
-    { value: "toys", label: "Игрушки" },
-    { value: "kids_books", label: "Детские книги" },
-    { value: "baby_care", label: "Товары для ухода за ребенком" },
-    { value: "kids_textile", label: "Детский текстиль" },
-  ],
-  other: [{ value: "other", label: "Другое" }],
 };
 
 const conditions = Object.entries(ITEM_CONDITION_LABELS).map(
   ([value, label]) => ({ value, label }),
 );
 
-const transferTypes = Object.entries(TRANSFER_TYPE_LABELS).map(
-  ([value, label]) => ({ value, label }),
-);
-
-const cities = [
-  "Екатеринбург",
-  "Нижний Тагил",
-  "Каменск-Уральский",
-  "Первоуральск",
-  "Серов",
-  "Верхняя Пышма",
-];
+const transferTypes = CATALOG_TRANSFER_OPTIONS;
 
 type MenuName = "category" | "condition" | "city" | "transfer";
 
@@ -102,11 +53,20 @@ function getItemsLabel(count: number) {
 
 export function ItemFilters({
   items,
+  totalCount,
   onApply,
   onSearch,
 }: ItemFiltersProps) {
   const [openMenus, setOpenMenus] = useState<MenuName[]>([]);
   const [query, setQuery] = useState("");
+  const [cities, setCities] = useState<string[]>([
+    "Екатеринбург",
+    "Нижний Тагил",
+    "Каменск-Уральский",
+    "Первоуральск",
+    "Серов",
+    "Верхняя Пышма",
+  ]);
 
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryValue>(EMPTY_CATEGORY);
@@ -124,9 +84,9 @@ export function ItemFilters({
 
   const categories = useMemo(
     () =>
-      Object.entries(ITEM_CATEGORY_LABELS).map(([value, label]) => ({
-        value: value as CategoryValue,
-        label,
+      CATEGORY_OPTIONS.map((item) => ({
+        value: item.value as CategoryValue,
+        label: item.label,
       })),
     [],
   );
@@ -149,6 +109,8 @@ export function ItemFilters({
     selectedCities.length > 0 ||
     selectedTransfers.length > 0;
 
+  const resultsCount = totalCount ?? items.length;
+
   const isOpen = (menu: MenuName) => openMenus.includes(menu);
 
   function toggleMenu(menu: MenuName) {
@@ -167,6 +129,22 @@ export function ItemFilters({
 
     toggleMenu("category");
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getCities()
+      .then((nextCities) => {
+        if (!cancelled && nextCities.length > 0) {
+          setCities(nextCities);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -315,6 +293,10 @@ export function ItemFilters({
     );
   }
 
+  const draftSubcategoryOptions = draftCategory
+    ? getSubcategoryOptions(draftCategory)
+    : [];
+
   return (
     <div className={styles.filterArea} ref={rootRef}>
       <div className={styles.topRow}>
@@ -353,7 +335,6 @@ export function ItemFilters({
         </form>
 
         <div className={styles.quickFilters}>
-          {/* Состояние */}
           <div className={styles.filterGroup}>
             <button
               type="button"
@@ -365,8 +346,6 @@ export function ItemFilters({
                 <img src="/star.svg" alt="" />
               </span>
               Состояние
-              {selectedConditions.length > 0 &&
-                ` · ${selectedConditions.length}`}
               <span className={styles.chevron} />
             </button>
 
@@ -390,7 +369,6 @@ export function ItemFilters({
             )}
           </div>
 
-          {/* Местоположение */}
           <div className={styles.filterGroup}>
             <button
               type="button"
@@ -402,7 +380,6 @@ export function ItemFilters({
                 <img src="/map.svg" alt="" />
               </span>
               Местоположение
-              {selectedCities.length > 0 && ` · ${selectedCities.length}`}
               <span className={styles.chevron} />
             </button>
 
@@ -426,7 +403,6 @@ export function ItemFilters({
             )}
           </div>
 
-          {/* Тип передачи */}
           <div className={styles.filterGroup}>
             <button
               type="button"
@@ -438,8 +414,6 @@ export function ItemFilters({
                 <img src="/energy.svg" alt="" />
               </span>
               Тип передачи
-              {selectedTransfers.length > 0 &&
-                ` · ${selectedTransfers.length}`}
               <span className={styles.chevron} />
             </button>
 
@@ -490,7 +464,7 @@ export function ItemFilters({
                 "Категория"}
             </h2>
 
-            {(subcategories[draftCategory] ?? []).map((item) =>
+            {draftSubcategoryOptions.map((item) =>
               renderCheckbox(
                 item.value,
                 item.label,
@@ -499,24 +473,18 @@ export function ItemFilters({
               ),
             )}
 
-            {!subcategories[draftCategory]?.length && (
+            {!draftSubcategoryOptions.length && (
               <p className={styles.noSubcategories}>
                 Для этой категории подкатегории не указаны.
               </p>
             )}
 
             <div className={styles.dropdownActions}>
-              <button
-                type="button"
-                onClick={resetCategoryFilters}
-              >
+              <button type="button" onClick={resetCategoryFilters}>
                 Сбросить
               </button>
 
-              <button
-                type="button"
-                onClick={applyCategoryFilters}
-              >
+              <button type="button" onClick={applyCategoryFilters}>
                 Применить
               </button>
             </div>
@@ -527,7 +495,7 @@ export function ItemFilters({
       {hasActiveFilters && (
         <div className={styles.filtersFooter}>
           <span className={styles.resultsCount}>
-            Найдено {items.length} {getItemsLabel(items.length)}
+            Найдено {resultsCount} {getItemsLabel(resultsCount)}
           </span>
 
           <button

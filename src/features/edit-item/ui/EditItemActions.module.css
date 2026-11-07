@@ -1,0 +1,60 @@
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+  
+  .actions button:first-child {
+    flex: 1;
+    height: 52px;
+    padding: 0;
+    background: #1d1d1d;
+    color: #ffffff;
+    border: none;
+    border-radius: 13px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .actions button:first-child:hover {
+    background: #393939;
+  }
+  
+  .actions button:last-child {
+    flex: 1;
+    height: 52px;
+    padding: 0 12px;
+    background: transparent;
+    color: #1d1d1d;
+    border: none;
+    border-radius: 13px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+  
+  .actions button:last-child:hover {
+    opacity: 0.65;
+  }
+  
+  .actions button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 600px) {
+    .actions {
+      flex-direction: column;
+    }
+  
+    .actions button {
+      width: 100%;
+    }
+  }

@@ -1,26 +1,16 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import type { Item } from "@/entities/item";
-import { Container, PageHeader } from "@/shared/ui";
+import { useEffect, useMemo, useState } from "react";
+import type { Item, ItemCondition } from "@/entities/item";
+import {
+  fetchCatalog,
+  getListingErrorMessage,
+} from "@/entities/item";
+import { Container } from "@/shared/ui";
+import type { LoadingState } from "@/shared/types";
 import { ItemCatalog } from "@/widgets/item-catalog";
 import { ItemFilters, type CatalogFilters } from "@/widgets/item-filters";
-import { stubItems } from "@/shared/lib/stubs";
 
-type StoredAd = {
-  id: number;
-  title: string;
-  description: string;
-  transfer: "exchange" | "free";
-  category: Item["category"];
-  subcategory?: string;
-  condition: Item["condition"];
-  status: Item["status"];
-  city: string;
-  photo?: string;
-  photos?: string[];
-  exchangeWishes?: string;
-};
 const emptyFilters: CatalogFilters = {
   query: "",
   category: "",
@@ -29,101 +19,85 @@ const emptyFilters: CatalogFilters = {
   cities: [],
   transferTypes: [],
 };
-const STORAGE_KEY = "dobry-shkaf-created-ads";
-
-function toCatalogItem(ad: StoredAd): Item {
-  return {
-    id: String(ad.id),
-    ownerId: "current-user",
-    title: ad.title,
-    description: ad.description,
-    category: ad.category,
-    subcategory: ad.subcategory as Item["subcategory"],
-    condition: ad.condition,
-    photoUrls: ad.photos?.length ? ad.photos : ad.photo ? [ad.photo] : [],
-    transferType: ad.transfer,
-    exchangeWishes: ad.exchangeWishes,
-    city: ad.city,
-    status: ad.status,
-  };
-}
 
 export default function CatalogPage() {
-  const [items, setItems] = useState<Item[]>(stubItems);
+  const [items, setItems] = useState<Item[]>([]);
+  const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState<CatalogFilters>(emptyFilters);
+  const [status, setStatus] = useState<LoadingState>("loading");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    function readPublishedAds() {
-      try {
-        const savedAds = JSON.parse(
-          localStorage.getItem(STORAGE_KEY) || "[]",
-        ) as StoredAd[];
-        const publishedItems = savedAds
-          .filter((ad) => ad.status === "published")
-          .map(toCatalogItem);
+    let cancelled = false;
 
-        const itemsById = new Map<string, Item>();
-        stubItems.forEach((item) => itemsById.set(item.id, item));
-        publishedItems.forEach((item) => itemsById.set(item.id, item));
-        setItems([...itemsById.values()]);
-      } catch {
-        setItems(stubItems);
+    async function loadCatalog() {
+      setStatus("loading");
+      setError("");
+
+      try {
+        const subcategory =
+          filters.subcategories.length === 1
+            ? filters.subcategories[0]
+            : undefined;
+
+        const response = await fetchCatalog({
+          q: filters.query,
+          category: filters.category || undefined,
+          subcategory,
+          conditions: filters.conditions as ItemCondition[],
+          cities: filters.cities,
+          transferTypes: filters.transferTypes as Array<"free" | "exchange">,
+          page: 1,
+          pageSize: 100,
+        });
+
+        if (cancelled) return;
+
+        let nextItems = response.items;
+
+        if (filters.subcategories.length > 1) {
+          nextItems = nextItems.filter(
+            (item) =>
+              item.subcategory &&
+              filters.subcategories.includes(item.subcategory),
+          );
+        }
+
+        setItems(nextItems);
+        setTotal(
+          filters.subcategories.length > 1 ? nextItems.length : response.total,
+        );
+        setStatus("success");
+      } catch (loadError) {
+        if (cancelled) return;
+        setItems([]);
+        setTotal(0);
+        setStatus("error");
+        setError(getListingErrorMessage(loadError));
       }
     }
 
-    readPublishedAds();
-    window.addEventListener("focus", readPublishedAds);
-    window.addEventListener("dobry-shkaf-ads-updated", readPublishedAds);
-    window.addEventListener("storage", readPublishedAds);
+    void loadCatalog();
 
     return () => {
-      window.removeEventListener("focus", readPublishedAds);
-      window.removeEventListener("dobry-shkaf-ads-updated", readPublishedAds);
-      window.removeEventListener("storage", readPublishedAds);
+      cancelled = true;
     };
-  }, []);
+  }, [filters]);
 
-  const filteredItems = useMemo(() => {
-    return items.filter((item) => {
-      if (filters.query) {
-        const q = filters.query.toLowerCase();
-        const haystack = `${item.title} ${item.description}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      if (filters.category && item.category !== filters.category) return false;
-      if (
-        filters.subcategories.length > 0 &&
-        (!item.subcategory || !filters.subcategories.includes(item.subcategory))
-      ) {
-        return false;
-      }
-      if (
-        filters.conditions.length > 0 &&
-        !filters.conditions.includes(item.condition)
-      ) {
-        return false;
-      }
-      if (filters.cities.length > 0 && !filters.cities.includes(item.city)) {
-        return false;
-      }
-      if (
-        filters.transferTypes.length > 0 &&
-        !filters.transferTypes.includes(item.transferType)
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [items, filters]);
+  const catalogStatus = useMemo(() => status, [status]);
 
   return (
     <Container>
       <ItemFilters
-        items={filteredItems}
+        items={items}
+        totalCount={total}
         onApply={setFilters}
         onSearch={(query) => setFilters((prev) => ({ ...prev, query }))}
       />
-      <ItemCatalog items={items} />
+      {error && status === "error" ? (
+        <p role="alert">{error}</p>
+      ) : null}
+      <ItemCatalog items={items} status={catalogStatus} />
     </Container>
   );
 }

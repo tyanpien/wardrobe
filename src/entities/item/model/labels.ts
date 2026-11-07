@@ -1,13 +1,9 @@
 import type { ItemCategory, ItemCondition, ItemStatus, TransferType } from "./types";
+import { CATEGORY_OPTIONS } from "./catalog";
 
-export const ITEM_CATEGORY_LABELS: Record<ItemCategory, string> = {
-  clothing: "Одежда",
-  shoes: "Обувь",
-  accessories: "Аксессуары",
-  home_textile: "Домашний текстиль",
-  kids: "Детские вещи",
-  other: "Другое",
-};
+export const ITEM_CATEGORY_LABELS: Record<ItemCategory, string> = Object.fromEntries(
+  CATEGORY_OPTIONS.map((item) => [item.value, item.label]),
+) as Record<ItemCategory, string>;
 
 export const ITEM_CONDITION_LABELS: Record<ItemCondition, string> = {
   new: "Новое",
@@ -28,3 +24,11 @@ export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
   transferred: "Передано",
   unpublished: "Снято с публикации",
 };
+
+export const CATALOG_TRANSFER_OPTIONS: Array<{
+  value: "free" | "exchange";
+  label: string;
+}> = [
+  { value: "free", label: "Бесплатно" },
+  { value: "exchange", label: "Обмен" },
+];

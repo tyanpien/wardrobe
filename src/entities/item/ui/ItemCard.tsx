@@ -5,38 +5,8 @@ import {
   TRANSFER_TYPE_LABELS,
   ITEM_CONDITION_LABELS,
 } from "../model/labels";
+import { subcategoryLabel } from "../model/catalog";
 import styles from "./ItemCard.module.css";
-
-const subcategoryLabels: Record<string, string> = {
-  outerwear: "Верхняя одежда",
-  tshirts_tops: "Футболки и топы",
-  shirts_blouses: "Рубашки и блузки",
-  sweaters_hoodies: "Свитеры и толстовки",
-  pants_jeans: "Брюки и джинсы",
-  dresses_skirts: "Платья и юбки",
-  sportswear: "Спортивная одежда",
-  homewear: "Домашняя одежда",
-  shoes_demi: "Демисезонная",
-  shoes_sport: "Спортивная",
-  shoes_winter: "Зимняя",
-  shoes_summer: "Летняя",
-  bags_backpacks: "Сумки и рюкзаки",
-  hats: "Головные уборы",
-  scarves_gloves: "Шарфы и перчатки",
-  belts: "Ремни",
-  bedding: "Постельное белье",
-  towels: "Полотенца",
-  blankets: "Пледы и одеяла",
-  curtains: "Шторы",
-  kids_clothing: "Детская одежда",
-  kids_shoes: "Детская обувь",
-  newborn_clothing: "Одежда для новорожденных",
-  toys: "Игрушки",
-  kids_books: "Детские книги",
-  baby_care: "Товары для ухода за ребенком",
-  kids_textile: "Детский текстиль",
-  other: "Другое",
-};
 
 const statusClass: Record<string, string> = {
   published: styles.published,
@@ -50,11 +20,13 @@ type ItemCardProps = {
 };
 
 export function ItemCard({ item }: ItemCardProps) {
+  const cover = item.photoUrls[0] || item.coverUrl || "";
+
   return (
     <article className={styles.card}>
       <div className={styles.photo}>
-        {item.photoUrls[0] ? (
-          <img src={item.photoUrls[0]} alt={item.title} />
+        {cover ? (
+          <img src={cover} alt={item.title} />
         ) : (
           <span>Фото вещи</span>
         )}
@@ -69,8 +41,8 @@ export function ItemCard({ item }: ItemCardProps) {
       <p className={styles.description}>{item.description}</p>
 
       <span className={styles.locationPin} title={item.city}>
-          <img src='/location.svg' alt="" />
-          {item.city}
+        <img src="/location.svg" alt="" />
+        {item.city}
       </span>
 
       <div className={styles.tags}>
@@ -81,14 +53,11 @@ export function ItemCard({ item }: ItemCardProps) {
         <span>{ITEM_CATEGORY_LABELS[item.category]}</span>
 
         {item.subcategory && (
-          <span>
-            {subcategoryLabels[item.subcategory] || item.subcategory}
-          </span>
+          <span>{subcategoryLabel(item.category, item.subcategory)}</span>
         )}
 
         <span>{ITEM_CONDITION_LABELS[item.condition]}</span>
       </div>
-
     </article>
   );
 }

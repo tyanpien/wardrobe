@@ -1,14 +1,10 @@
-import { PageHeader } from "@/shared/ui";
+import { Suspense } from "react";
 import { Chat } from "@/widgets/chat";
 
 export default function MessagesPage() {
   return (
-    <section>
-      <PageHeader
-        title="Сообщения"
-        description="Двусторонние чаты с пользователями и организациями."
-      />
+    <Suspense fallback={<p style={{ padding: 32 }}>Загрузка переписки...</p>}>
       <Chat />
-    </section>
+    </Suspense>
   );
 }

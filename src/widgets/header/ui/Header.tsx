@@ -66,9 +66,14 @@ export function Header() {
 
   function logout() {
     localStorage.removeItem("dobry-shkaf-user");
+    localStorage.removeItem("dobry-shkaf-access-token");
+    localStorage.removeItem("dobry-shkaf-refresh-token");
+  
     window.dispatchEvent(new Event("dobry-shkaf-user-updated"));
+  
     setUser(null);
     setMenuOpen(false);
+  
     router.push("/login");
   }
 

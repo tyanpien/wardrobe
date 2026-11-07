@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -13,160 +12,72 @@ import {
 } from "react";
 import styles from "../../create/create-item.module.css";
 import { CategorySelect } from "@/shared/ui/CategorySelect/CategorySelect";
+import type {
+  DeliveryMethod,
+  Item,
+  ItemCategory,
+  ItemCondition,
+  ItemPhoto,
+} from "@/entities/item";
+import {
+  CATEGORY_OPTIONS,
+  addListingPhotos,
+  deleteListingPhoto,
+  fetchListing,
+  getListingErrorMessage,
+  getSubcategoryOptions,
+  prepareListingPhoto,
+  updateListing,
+} from "@/entities/item";
 
-type Category =
-  | "clothing"
-  | "shoes"
-  | "accessories"
-  | "home_textile"
-  | "kids"
-  | "other";
-
-type Condition = "new" | "good" | "excellent" | "needs_repair";
 type Transfer = "free" | "exchange";
-type AdStatus =
-  | "published"
-  | "in_transfer"
-  | "transferred"
-  | "unpublished";
-type Delivery = "meeting" | "pickup" | "agreement";
 
-type SavedAd = {
-  id: number;
-  title: string;
-  description: string;
-  transfer: Transfer;
-  category: Category;
-  subcategory: string;
-  condition: Condition;
-  status: AdStatus;
-  city: string;
-  photo: string;
-  photos: string[];
-  exchangeWishes: string;
-  createdAt: string;
-  delivery: Delivery;
+type NewPhotoDraft = {
+  kind: "new";
+  previewUrl: string;
+  file: File;
+  name: string;
 };
 
-const STORAGE_KEY = "dobry-shkaf-created-ads";
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
-
-const CATEGORIES: { value: Category; label: string }[] = [
-  { value: "clothing", label: "Одежда" },
-  { value: "shoes", label: "Обувь" },
-  { value: "accessories", label: "Аксессуары" },
-  { value: "home_textile", label: "Домашний текстиль" },
-  { value: "kids", label: "Детские вещи" },
-  { value: "other", label: "Другое" },
-];
-
-const SUBCATEGORIES: Record<
-  Category,
-  { value: string; label: string }[]
-> = {
-  clothing: [
-    { value: "outerwear", label: "Верхняя одежда" },
-    { value: "tshirts_tops", label: "Футболки и топы" },
-    { value: "shirts_blouses", label: "Рубашки и блузки" },
-    { value: "sweaters_hoodies", label: "Свитеры и толстовки" },
-    { value: "pants_jeans", label: "Брюки и джинсы" },
-    { value: "dresses_skirts", label: "Платья и юбки" },
-    { value: "sportswear", label: "Спортивная одежда" },
-    { value: "homewear", label: "Домашняя одежда" },
-  ],
-  shoes: [
-    { value: "shoes_demi", label: "Демисезонная обувь" },
-    { value: "shoes_sport", label: "Спортивная обувь" },
-    { value: "shoes_winter", label: "Зимняя обувь" },
-    { value: "shoes_summer", label: "Летняя обувь" },
-  ],
-  accessories: [
-    { value: "bags_backpacks", label: "Сумки и рюкзаки" },
-    { value: "hats", label: "Головные уборы" },
-    { value: "scarves_gloves", label: "Шарфы и перчатки" },
-    { value: "belts", label: "Ремни" },
-  ],
-  home_textile: [
-    { value: "bedding", label: "Постельное белье" },
-    { value: "towels", label: "Полотенца" },
-    { value: "blankets", label: "Пледы и одеяла" },
-    { value: "curtains", label: "Шторы" },
-  ],
-  kids: [
-    { value: "kids_clothing", label: "Детская одежда" },
-    { value: "kids_shoes", label: "Детская обувь" },
-    { value: "newborn_clothing", label: "Одежда для новорожденных" },
-    { value: "toys", label: "Игрушки" },
-    { value: "kids_books", label: "Детские книги" },
-    { value: "baby_care", label: "Товары для ухода за ребенком" },
-    { value: "kids_textile", label: "Детский текстиль" },
-  ],
-  other: [{ value: "other", label: "Другое" }],
+type ExistingPhotoDraft = {
+  kind: "existing";
+  id: string;
+  previewUrl: string;
+  name: string;
 };
 
-const CONDITIONS: { value: Condition; label: string }[] = [
+type PhotoDraft = NewPhotoDraft | ExistingPhotoDraft;
+
+const CATEGORIES = CATEGORY_OPTIONS.map((item) => ({
+  value: item.value,
+  label: item.label,
+}));
+
+const CONDITIONS: { value: ItemCondition; label: string }[] = [
   { value: "new", label: "Новое" },
   { value: "good", label: "Хорошее" },
   { value: "excellent", label: "Отличное" },
   { value: "needs_repair", label: "Требует ремонта" },
 ];
 
-function compressImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
-    reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
-
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        reject(new Error("Не удалось прочитать файл"));
-        return;
-      }
-
-      const image = new Image();
-
-      image.onerror = () =>
-        reject(new Error("Не удалось обработать изображение"));
-
-      image.onload = () => {
-        const maxDimension = 1400;
-        const scale = Math.min(
-          1,
-          maxDimension / Math.max(image.width, image.height),
-        );
-
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-
-        const context = canvas.getContext("2d");
-
-        if (!context) {
-          reject(new Error("Браузер не смог обработать изображение"));
-          return;
-        }
-
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.78));
-      };
-
-      image.src = reader.result;
-    };
-
-    reader.readAsDataURL(file);
-  });
-}
-
-function readAds(): SavedAd[] {
-  const parsed: unknown = JSON.parse(
-    localStorage.getItem(STORAGE_KEY) || "[]",
-  );
-
-  if (!Array.isArray(parsed)) {
-    return [];
+function toExistingPhotos(item: Item): ExistingPhotoDraft[] {
+  if (item.photos?.length) {
+    return item.photos.map((photo: ItemPhoto, index) => ({
+      kind: "existing" as const,
+      id: photo.id,
+      previewUrl: photo.url,
+      name: `Фото ${index + 1}`,
+    }));
   }
 
-  return parsed as SavedAd[];
+  return item.photoUrls.map((url, index) => ({
+    kind: "existing" as const,
+    id: `legacy-${index}`,
+    previewUrl: url,
+    name: `Фото ${index + 1}`,
+  }));
 }
 
 export default function EditItemPage() {
@@ -174,70 +85,85 @@ export default function EditItemPage() {
   const params = useParams<{ id: string }>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [adId, setAdId] = useState<number | null>(null);
+  const [listingId, setListingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<Category | "">("");
+  const [category, setCategory] = useState<ItemCategory | "">("");
   const [subcategory, setSubcategory] = useState("");
-  const [condition, setCondition] = useState<Condition>("new");
+  const [condition, setCondition] = useState<ItemCondition>("new");
   const [transfer, setTransfer] = useState<Transfer>("exchange");
   const [exchangeWishes, setExchangeWishes] = useState("");
-  const [delivery, setDelivery] = useState<Delivery>("meeting");
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [photoNames, setPhotoNames] = useState<string[]>([]);
-  const [city, setCity] = useState("Екатеринбург");
-  const [originalAd, setOriginalAd] = useState<SavedAd | null>(null);
+  const [delivery, setDelivery] = useState<DeliveryMethod>("meeting");
+  const [photos, setPhotos] = useState<PhotoDraft[]>([]);
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
+  const [city, setCity] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [found, setFound] = useState(false);
 
   useEffect(() => {
-    try {
-      const id = Number(params.id);
+    let cancelled = false;
 
-      if (!Number.isFinite(id) || !params.id) {
-        setError("Некорректный номер объявления.");
-        return;
+    async function loadListing() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const item = await fetchListing(params.id);
+
+        if (cancelled) return;
+
+        const rawUser = localStorage.getItem("dobry-shkaf-user");
+        const user = rawUser
+          ? (JSON.parse(rawUser) as { id?: string })
+          : null;
+
+        if (!user?.id || user.id !== item.ownerId) {
+          setFound(false);
+          setError("Редактировать можно только свои объявления.");
+          return;
+        }
+
+        if (item.status !== "published" && item.status !== "unpublished") {
+          setFound(false);
+          setError(
+            "Объявление нельзя редактировать в текущем статусе.",
+          );
+          return;
+        }
+
+        setFound(true);
+        setListingId(item.id);
+        setTitle(item.title);
+        setDescription(item.description);
+        setCategory(item.category);
+        setSubcategory(item.subcategory || "");
+        setCondition(item.condition);
+        setTransfer(item.transferType === "free" ? "free" : "exchange");
+        setExchangeWishes(item.exchangeWishes || "");
+        setDelivery(item.deliveryMethod || "meeting");
+        setCity(item.city);
+        setPhotos(toExistingPhotos(item));
+        setRemovedPhotoIds([]);
+      } catch (loadError) {
+        if (cancelled) return;
+        setFound(false);
+        setError(getListingErrorMessage(loadError, "Объявление не найдено."));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      const ad = readAds().find((item) => item.id === id);
-
-      if (!ad) {
-        setError(
-          "Объявление не найдено. Редактировать можно объявления, сохранённые в этом браузере.",
-        );
-        return;
-      }
-
-      setOriginalAd(ad);
-      setAdId(ad.id);
-      setTitle(ad.title ?? "");
-      setDescription(ad.description ?? "");
-      setCategory(ad.category ?? "");
-      setSubcategory(ad.subcategory ?? "");
-      setCondition(ad.condition ?? "new");
-      setTransfer(ad.transfer ?? "exchange");
-      setExchangeWishes(ad.exchangeWishes ?? "");
-      setDelivery(ad.delivery ?? "meeting");
-      setCity(ad.city ?? "Екатеринбург");
-
-      const savedPhotos =
-        Array.isArray(ad.photos) && ad.photos.length > 0
-          ? ad.photos
-          : ad.photo
-            ? [ad.photo]
-            : [];
-
-      setPhotos(savedPhotos);
-      setPhotoNames(savedPhotos.map((_, index) => `Фото ${index + 1}`));
-    } catch {
-      setError("Не удалось загрузить объявление из браузера.");
-    } finally {
-      setLoading(false);
     }
+
+    void loadListing();
+
+    return () => {
+      cancelled = true;
+    };
   }, [params.id]);
 
-  function readFiles(fileList: FileList | null) {
+  async function readFiles(fileList: FileList | null) {
     if (!fileList) return;
 
     setError("");
@@ -265,44 +191,66 @@ export default function EditItemPage() {
       return;
     }
 
-    Promise.all(selected.map(compressImage))
-      .then((dataUrls) => {
-        setPhotos((current) => [...current, ...dataUrls].slice(0, 5));
-        setPhotoNames((current) =>
-          [...current, ...selected.map((file) => file.name)].slice(0, 5),
-        );
-      })
-      .catch(() =>
-        setError(
-          "Не удалось загрузить фотографии. Попробуйте выбрать их ещё раз.",
-        ),
+    try {
+      const prepared = await Promise.all(
+        selected.map(async (file) => {
+          const jpegFile = await prepareListingPhoto(file);
+          return {
+            kind: "new" as const,
+            previewUrl: URL.createObjectURL(jpegFile),
+            file: jpegFile,
+            name: file.name,
+          } satisfies NewPhotoDraft;
+        }),
       );
+      setPhotos((current) => [...current, ...prepared].slice(0, 5));
+    } catch {
+      setError(
+        "Не удалось загрузить фотографии. Попробуйте выбрать их ещё раз.",
+      );
+    }
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    readFiles(event.target.files);
+    void readFiles(event.target.files);
     event.target.value = "";
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
-    readFiles(event.dataTransfer.files);
+    void readFiles(event.dataTransfer.files);
   }
 
   function removePhoto(index: number) {
+    const target = photos[index];
+  
+    if (!target) return;
+  
+    if (
+      target.kind === "existing" &&
+      !target.id.startsWith("legacy-")
+    ) {
+      setRemovedPhotoIds((current) =>
+        current.includes(target.id)
+          ? current
+          : [...current, target.id]
+      );
+    }
+  
+    if (target.kind === "new") {
+      URL.revokeObjectURL(target.previewUrl);
+    }
+  
     setPhotos((current) =>
-      current.filter((_, photoIndex) => photoIndex !== index),
-    );
-    setPhotoNames((current) =>
-      current.filter((_, photoIndex) => photoIndex !== index),
+      current.filter((_, photoIndex) => photoIndex !== index)
     );
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
-    if (!originalAd || adId === null) {
+    if (!listingId) {
       setError("Не удалось определить объявление для сохранения.");
       return;
     }
@@ -312,7 +260,7 @@ export default function EditItemPage() {
       return;
     }
 
-    if (!subcategory) {
+    if (category !== "other" && !subcategory) {
       setError("Выберите подкатегорию.");
       return;
     }
@@ -327,43 +275,43 @@ export default function EditItemPage() {
       return;
     }
 
-    const updatedAd: SavedAd = {
-      ...originalAd,
-      id: adId,
-      title: title.trim(),
-      description: description.trim(),
-      transfer,
-      category,
-      subcategory,
-      condition,
-      city: city.trim() || "Город не указан",
-      photo: photos[0],
-      photos,
-      exchangeWishes:
-        transfer === "exchange" ? exchangeWishes.trim() : "",
-      delivery,
-    };
+    setSubmitting(true);
 
     try {
-      const currentAds = readAds();
-      const index = currentAds.findIndex((item) => item.id === adId);
+      await updateListing(listingId, {
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        subcategory: category === "other" ? null : subcategory,
+        condition,
+        transferType: transfer,
+        exchangeWishes:
+          transfer === "exchange" ? exchangeWishes.trim() : null,
+        deliveryMethod: delivery,
+      });
 
-      if (index === -1) {
-        setError("Объявление больше не найдено в сохранённых данных.");
-        return;
+      const newFiles = photos
+        .filter((photo): photo is NewPhotoDraft => photo.kind === "new")
+        .map((photo) => photo.file);
+
+      if (newFiles.length > 0) {
+        await addListingPhotos(listingId, newFiles);
       }
 
-      const updatedAds = [...currentAds];
-      updatedAds[index] = updatedAd;
+      const uniqueRemovedPhotoIds = [...new Set(removedPhotoIds)];
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedAds));
-      window.dispatchEvent(new Event("dobry-shkaf-ads-updated"));
-      setOriginalAd(updatedAd);
+      for (const photoId of uniqueRemovedPhotoIds) {
+        await deleteListingPhoto(listingId, photoId);
+      }
+
+      const refreshed = await fetchListing(listingId);
+      setPhotos(toExistingPhotos(refreshed));
+      setRemovedPhotoIds([]);
       setSuccess(true);
-    } catch {
-      setError(
-        "Не удалось сохранить изменения. Возможно, фотографии слишком большие. Попробуйте загрузить файлы меньшего размера.",
-      );
+    } catch (submitError) {
+      setError(getListingErrorMessage(submitError));
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -381,7 +329,7 @@ export default function EditItemPage() {
         <div className={styles.successPanel}>
           <div className={styles.successIcon}>✓</div>
           <h1>Изменения сохранены</h1>
-          <p>Объявление обновлено и сохранено в этом браузере.</p>
+          <p>Объявление обновлено на сервере.</p>
           <div className={styles.successActions}>
             <button
               type="button"
@@ -389,6 +337,13 @@ export default function EditItemPage() {
               className={styles.publishButton}
             >
               Мои объявления
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/catalog/${listingId}`)}
+              className={styles.backToForm}
+            >
+              Открыть объявление
             </button>
             <button
               type="button"
@@ -403,7 +358,7 @@ export default function EditItemPage() {
     );
   }
 
-  if (!originalAd) {
+  if (!found) {
     return (
       <main className={styles.page}>
         <div className={styles.pageHeading}>
@@ -432,6 +387,13 @@ export default function EditItemPage() {
     );
   }
 
+  const subcategoryOptions = category
+    ? getSubcategoryOptions(category).map((item) => ({
+        value: item.value,
+        label: item.label,
+      }))
+    : [];
+
   return (
     <main className={styles.page}>
       <div className={styles.pageHeading}>
@@ -445,7 +407,7 @@ export default function EditItemPage() {
         <h1>Редактировать объявление</h1>
       </div>
 
-      <form className={styles.form} onSubmit={handleSubmit}>
+      <form className={styles.form} onSubmit={(event) => void handleSubmit(event)}>
         <div className={styles.column}>
           <label className={styles.field}>
             <span>Название</span>
@@ -482,19 +444,21 @@ export default function EditItemPage() {
             />
           </label>
 
-          <label className={styles.field}>
-            <span>Подкатегория</span>
-            <CategorySelect
-              value={subcategory}
-              options={category ? SUBCATEGORIES[category] : []}
-              placeholder={
-                category
-                  ? "Выберите подкатегорию"
-                  : "Сначала выберите категорию"
-              }
-              onChange={setSubcategory}
-            />
-          </label>
+          {category !== "other" && (
+            <label className={styles.field}>
+              <span>Подкатегория</span>
+              <CategorySelect
+                value={subcategory}
+                options={subcategoryOptions}
+                placeholder={
+                  category
+                    ? "Выберите подкатегорию"
+                    : "Сначала выберите категорию"
+                }
+                onChange={setSubcategory}
+              />
+            </label>
+          )}
 
           <fieldset className={styles.choiceGroup}>
             <legend>Состояние</legend>
@@ -587,15 +551,10 @@ export default function EditItemPage() {
 
           <label className={styles.field}>
             <span>Город</span>
-            <input
-              value={city}
-              onChange={(event) => setCity(event.target.value)}
-              placeholder="Укажите город"
-              maxLength={100}
-              required
-            />
+            <input value={city} readOnly maxLength={100} required />
+            <small>Город берётся из профиля и не меняется здесь.</small>
           </label>
-          
+
           <div className={styles.field}>
             <span>Фото</span>
             <div
@@ -623,7 +582,7 @@ export default function EditItemPage() {
                 Перетащите изображения сюда или нажмите, чтобы
                 <br className={styles.desktopBreak} /> выбрать файлы
               </p>
-              <small>JPG, PNG, WEBP. Не более 5 фотографий до 5 МБ.</small>
+              <small>JPG, PNG. Не более 5 фотографий до 5 МБ.</small>
             </div>
 
             {photos.length > 0 && (
@@ -631,11 +590,11 @@ export default function EditItemPage() {
                 {photos.map((photo, index) => (
                   <div
                     className={styles.photoPreview}
-                    key={`${photo.slice(0, 30)}-${index}`}
+                    key={`${photo.kind}-${photo.name}-${index}`}
                   >
                     <img
-                      src={photo}
-                      alt={photoNames[index] || `Фото ${index + 1}`}
+                      src={photo.previewUrl}
+                      alt={photo.name || `Фото ${index + 1}`}
                     />
                     <button
                       type="button"
@@ -658,8 +617,12 @@ export default function EditItemPage() {
           )}
 
           <div className={styles.submitRow}>
-            <button type="submit" className={styles.publishButton}>
-              Сохранить изменения
+            <button
+              type="submit"
+              className={styles.publishButton}
+              disabled={submitting}
+            >
+              {submitting ? "Сохранение..." : "Сохранить изменения"}
             </button>
           </div>
         </div>

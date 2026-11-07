@@ -3,60 +3,7 @@ import type { Organization } from "@/entities/organization";
 import type { VolunteerTask } from "@/entities/volunteer-task";
 import type { EcoStats } from "@/entities/eco-stats";
 
-export const stubItems: Item[] = [
-  {
-    id: "item-1",
-    ownerId: "user-1",
-    title: "Демисезонное пальто",
-    description: "Пальто в хорошем состоянии, без дефектов.",
-    category: "clothing",
-    subcategory: "outerwear",
-    condition: "good",
-    photoUrls: [],
-    transferType: "free",
-    city: "Первоуральск",
-    status: "published",
-  },
-  {
-    id: "item-2",
-    ownerId: "user-1",
-    title: "Детские книги",
-    description: "Набор книг для дошкольников.",
-    category: "kids",
-    subcategory: "kids_books",
-    condition: "excellent",
-    photoUrls: [],
-    transferType: "to_organization",
-    city: "Екатеринбург",
-    status: "published",
-  },
-  {
-    id: "item-3",
-    ownerId: "user-3",
-    title: "Демисезонное пальто",
-    description: "Пальто в хорошем состоянии, без дефектов.",
-    category: "clothing",
-    subcategory: "outerwear",
-    condition: "good",
-    photoUrls: [],
-    transferType: "free",
-    city: "Первоуральск",
-    status: "published",
-  },
-  {
-    id: "item-4",
-    ownerId: "user-5",
-    title: "Детские книги",
-    description: "Набор книг для дошкольников.",
-    category: "kids",
-    subcategory: "kids_books",
-    condition: "excellent",
-    photoUrls: [],
-    transferType: "to_organization",
-    city: "Екатеринбург",
-    status: "published",
-  },
-];
+export const stubItems: Item[] = [];
 
 export const stubOrganizations: Organization[] = [
   {
