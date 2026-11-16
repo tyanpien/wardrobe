@@ -193,15 +193,24 @@ export function ProfileDashboard() {
           );
         }
 
-        if (tab === "ads") {
-          nextItems = nextItems.filter((item) => item.status !== "transferred");
-        }
-
         if (transfer.length > 0 && transfer.length < 2) {
           nextItems = nextItems.filter((item) =>
             transfer.includes(item.transferType as Transfer),
           );
         }
+
+        const statusPriority: Record<ItemStatus, number> = {
+          published: 0,  
+          in_transfer: 1,  
+          transferred: 2,
+          unpublished: 3,
+        };
+
+        nextItems.sort((a, b) => {
+          const priorityA = statusPriority[a.status] ?? 99;
+          const priorityB = statusPriority[b.status] ?? 99;
+          return priorityA - priorityB;
+        });
 
         setAds(nextItems);
       } catch (error) {
@@ -568,14 +577,6 @@ export function ProfileDashboard() {
                     ) : (
                       <div className={styles.photoPlaceholder} />
                     )}
-
-                    <div className={styles.dots} aria-hidden="true">
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                    </div>
                   </div>
 
                   <div className={styles.cardBody}>

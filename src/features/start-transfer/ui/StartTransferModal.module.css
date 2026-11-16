@@ -1,0 +1,71 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgb(0 0 0 / 42%);
+  }
+  
+  .modal {
+    width: min(510px, 100%);
+    padding: 40px 32px;
+    border: 1px solid #49323e;
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #202020;
+    box-shadow: 0 18px 60px rgb(0 0 0 / 18%);
+  }
+  
+  .modal h2 {
+    margin: 0 0 24px;
+    font-size: 23px;
+    line-height: 1.25;
+    font-weight: 400;
+    text-align: center;
+  }
+  
+  .modal p {
+    margin: 0;
+    color: #555149;
+    font-size: 16px;
+    line-height: 1.2;
+    text-align: center;
+  }
+  
+  .actions {
+    display: flex;
+    gap: 160px;
+    margin-top: 40px;
+  }
+  
+  .actions button {
+    flex: 1;
+    min-height: 48px;
+    border: 0;
+    border-radius: 12px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .actions button:disabled {
+    cursor: wait;
+    opacity: .6;
+  }
+  
+  .cancel {
+    background: #fff;
+    color: #6D0009;
+  }
+  
+  .start {
+    background: #1d1d1d;
+    color: #fff;
+  }
+  
+  @media (max-width: 480px) {
+    .modal { padding: 22px; }
+    .actions { flex-direction: column-reverse; }
+  }

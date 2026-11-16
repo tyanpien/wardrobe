@@ -1,11 +1,8 @@
 
 .page {
-    width: min(1150px, calc(100vw - 48px));
-    min-height: calc(100vh - 100px);
-    padding: 30px 24px 70px;
-    box-sizing: border-box;
-    color: #171717;
-    background: #faf9f0;
+  width: min(1340px, calc(100% - 64px));
+  margin: 50px auto 90px;
+  color: #1C1C1C;
   }
   
   .heading {

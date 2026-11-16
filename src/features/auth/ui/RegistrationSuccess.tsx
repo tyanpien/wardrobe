@@ -2,13 +2,11 @@
 
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-
 import styles from "./AuthForm.module.css";
 
 export function RegistrationSuccess() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const from = searchParams.get("from") || "/";
 
   const handleSkip = () => {
@@ -16,9 +14,7 @@ export function RegistrationSuccess() {
   };
 
   const handleContinue = () => {
-    // Пока переход не реализован.
-    // Позже здесь можно открыть страницу
-    // заполнения дополнительной информации о пользователе.
+    router.push('/profile/edit');
   };
 
   return (

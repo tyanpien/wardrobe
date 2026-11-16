@@ -159,8 +159,8 @@ export default function ItemPage() {
       return false;
     }
   }
-  const chatHref = `/messages?user=${encodeURIComponent(item.ownerId)}&userName=${encodeURIComponent(sellerName)}&item=${encodeURIComponent(item.id)}`;
-
+  const chatHref = `/messages?item=${encodeURIComponent(item.id)}`;
+  
   return (
     <main className={styles.page}>
       <Container>

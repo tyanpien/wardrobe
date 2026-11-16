@@ -1,20 +1,30 @@
+
 "use client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import styles from "./page.module.css";
+
 import { getAvatarUrl } from "@/entities/user/api/profile";
+import { CategorySelect } from "@/shared/ui/CategorySelect/CategorySelect";
+
+import type {
+  ItemCategory,
+  ItemCondition,
+} from "@/entities/item";
+
+import {
+  CATEGORY_OPTIONS,
+  ITEM_CATEGORY_LABELS,
+  ITEM_CONDITION_LABELS,
+  getSubcategoryOptions,
+} from "@/entities/item";
 
 type Transfer = "exchange" | "free";
-type Condition = "new" | "excellent" | "good" | "needs_repair";
-type Category =
-  | "clothing"
-  | "shoes"
-  | "accessories"
-  | "home_textile"
-  | "kids"
-  | "other";
+type Category = ItemCategory;
+type Condition = ItemCondition;
 
 type SavedUser = {
   id?: string;
@@ -37,57 +47,8 @@ type Ad = {
   photo?: string;
 };
 
-const categoryLabels: Record<Category, string> = {
-  clothing: "Одежда",
-  shoes: "Обувь",
-  accessories: "Аксессуары",
-  home_textile: "Домашний текстиль",
-  kids: "Детские вещи",
-  other: "Другое",
-};
-
-const conditionLabels: Record<Condition, string> = {
-  new: "Новое",
-  excellent: "Отличное",
-  good: "Хорошее",
-  needs_repair: "Требует ремонта",
-};
-
-const categorySubcategories: Record<Category, string[]> = {
-  clothing: [
-    "Верхняя одежда",
-    "Футболки и топы",
-    "Рубашки и блузки",
-    "Свитеры и толстовки",
-    "Брюки и джинсы",
-    "Платья и юбки",
-    "Спортивная одежда",
-    "Домашняя одежда",
-  ],
-  shoes: ["Демисезонная", "Спортивная", "Зимняя", "Летняя"],
-  accessories: [
-    "Сумки и рюкзаки",
-    "Головные уборы",
-    "Шарфы и перчатки",
-    "Ремни",
-  ],
-  home_textile: [
-    "Постельное белье",
-    "Полотенца",
-    "Пледы и одеяла",
-    "Шторы",
-  ],
-  kids: [
-    "Детская одежда",
-    "Детская обувь",
-    "Одежда для новорожденных",
-    "Игрушки",
-    "Детские книги",
-    "Товары для ухода за ребенком",
-    "Детский текстиль",
-  ],
-  other: ["Другое"],
-};
+const categoryLabels = ITEM_CATEGORY_LABELS;
+const conditionLabels = ITEM_CONDITION_LABELS;
 
 const initialAds: Ad[] = [
   {
@@ -160,10 +121,12 @@ export default function PublicUserPage() {
   const userId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [user, setUser] = useState<SavedUser | null>(null);
+
   const [transfer, setTransfer] = useState<Transfer[]>([]);
   const [category, setCategory] = useState<Category | "">("");
   const [subcategories, setSubcategories] = useState<string[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
+
   const [filterOpen, setFilterOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
 
@@ -193,37 +156,62 @@ export default function PublicUserPage() {
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
-      const target = event.target as Node;
+      const target = event.target;
 
-      if (filterRef.current && !filterRef.current.contains(target)) {
+      if (!(target instanceof Node)) return;
+
+      if (!filterRef.current?.contains(target)) {
         setFilterOpen(false);
       }
 
-      if (transferRef.current && !transferRef.current.contains(target)) {
+      if (!transferRef.current?.contains(target)) {
+        setTransferOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFilterOpen(false);
         setTransferOpen(false);
       }
     }
 
     document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, []);
+
+  const subcategoryOptions = useMemo(
+    () => (category ? getSubcategoryOptions(category) : []),
+    [category],
+  );
 
   const ads = useMemo(() => {
     return initialAds.filter((ad) => {
       const matchesTransfer =
         transfer.length === 0 || transfer.includes(ad.transfer);
 
-      const matchesCategory = !category || ad.category === category;
+      const matchesCategory =
+        !category || ad.category === category;
+
+      const adSubcategory = subcategoryOptions.find(
+        (option) =>
+          option.value === ad.subcategory ||
+          option.label === ad.subcategory,
+      );
 
       const matchesSubcategory =
         subcategories.length === 0 ||
-        subcategories.includes(ad.subcategory);
+        (adSubcategory !== undefined &&
+          subcategories.includes(adSubcategory.value));
 
       const matchesCondition =
-        conditions.length === 0 || conditions.includes(ad.condition);
+        conditions.length === 0 ||
+        conditions.includes(ad.condition);
 
       return (
         matchesTransfer &&
@@ -232,7 +220,13 @@ export default function PublicUserPage() {
         matchesCondition
       );
     });
-  }, [transfer, category, subcategories, conditions]);
+  }, [
+    transfer,
+    category,
+    subcategories,
+    conditions,
+    subcategoryOptions,
+  ]);
 
   function toggleValue<T extends string>(
     value: T,
@@ -263,11 +257,14 @@ export default function PublicUserPage() {
           {user?.photo ? (
             <img
               className={styles.avatar}
-              src={getAvatarUrl(user.photo ?? null)}
+              src={getAvatarUrl(user.photo)}
               alt={`Фото пользователя ${profileName}`}
             />
           ) : (
-            <div className={styles.avatarFallback} aria-hidden="true">
+            <div
+              className={styles.avatarFallback}
+              aria-hidden="true"
+            >
               {profileName.slice(0, 1).toUpperCase()}
             </div>
           )}
@@ -276,7 +273,9 @@ export default function PublicUserPage() {
             <h1>{profileName}</h1>
             <p className={styles.city}>{profileCity}</p>
 
-            {user?.about && <p className={styles.about}>{user.about}</p>}
+            {user?.about && (
+              <p className={styles.about}>{user.about}</p>
+            )}
           </div>
 
           <Link
@@ -304,6 +303,7 @@ export default function PublicUserPage() {
               type="button"
               className={styles.filterTrigger}
               aria-expanded={filterOpen}
+              aria-haspopup="true"
               onClick={() => {
                 setFilterOpen((open) => !open);
                 setTransferOpen(false);
@@ -314,11 +314,19 @@ export default function PublicUserPage() {
             </button>
 
             {filterOpen && (
-              <aside className={styles.filterPanel}>
-                <div className={styles.filterHeading}>Тип передачи</div>
+              <aside
+                className={styles.filterPanel}
+                aria-label="Фильтры объявлений"
+              >
+                <div className={styles.filterHeading}>
+                  Тип передачи
+                </div>
 
                 {(["exchange", "free"] as Transfer[]).map((value) => (
-                  <label className={styles.checkRow} key={value}>
+                  <label
+                    className={styles.checkRow}
+                    key={value}
+                  >
                     <input
                       type="checkbox"
                       checked={transfer.includes(value)}
@@ -326,71 +334,85 @@ export default function PublicUserPage() {
                         toggleValue(value, transfer, setTransfer)
                       }
                     />
+
                     <span className={styles.customCheckbox}>
                       <img src="/checkbox.svg" alt="" />
                     </span>
+
                     <span>
                       {value === "exchange" ? "Обмен" : "Бесплатно"}
                     </span>
                   </label>
                 ))}
 
-                <div className={styles.filterHeading}>Категория</div>
+                <div className={styles.filterHeading}>
+                  Категория
+                </div>
 
-                <select
-                  className={styles.select}
+                <CategorySelect<Category>
                   value={category}
-                  onChange={(event) => {
-                    setCategory(event.target.value as Category | "");
+                  options={CATEGORY_OPTIONS.map((item) => ({
+                    value: item.value,
+                    label: item.label,
+                  }))}
+                  placeholder="Все категории"
+                  onChange={(value) => {
+                    setCategory(value);
                     setSubcategories([]);
                   }}
-                >
-                  <option value="">Все категории</option>
-                  {(Object.keys(categoryLabels) as Category[]).map((key) => (
-                    <option key={key} value={key}>
-                      {categoryLabels[key]}
-                    </option>
-                  ))}
-                </select>
+                />
 
-                {category &&
-                  categorySubcategories[category].map((value) => (
-                    <label className={styles.checkRow} key={value}>
-                      <input
-                        type="checkbox"
-                        checked={subcategories.includes(value)}
-                        onChange={() =>
-                          toggleValue(
-                            value,
-                            subcategories,
-                            setSubcategories,
-                          )
-                        }
-                      />
-                      <span className={styles.customCheckbox}>
-                        <img src="/checkbox.svg" alt="" />
-                      </span>
-                      <span>{value}</span>
-                    </label>
-                  ))}
-
-                <div className={styles.filterHeading}>Состояние</div>
-
-                {(Object.keys(conditionLabels) as Condition[]).map((key) => (
-                  <label className={styles.checkRow} key={key}>
+                {subcategoryOptions.map((item) => (
+                  <label
+                    className={styles.checkRow}
+                    key={item.value}
+                  >
                     <input
                       type="checkbox"
-                      checked={conditions.includes(key)}
+                      checked={subcategories.includes(item.value)}
                       onChange={() =>
-                        toggleValue(key, conditions, setConditions)
+                        toggleValue(
+                          item.value,
+                          subcategories,
+                          setSubcategories,
+                        )
                       }
                     />
+
                     <span className={styles.customCheckbox}>
                       <img src="/checkbox.svg" alt="" />
                     </span>
-                    <span>{conditionLabels[key]}</span>
+
+                    <span>{item.label}</span>
                   </label>
                 ))}
+
+                <div className={styles.filterHeading}>
+                  Состояние
+                </div>
+
+                {(Object.keys(conditionLabels) as Condition[]).map(
+                  (key) => (
+                    <label
+                      className={styles.checkRow}
+                      key={key}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={conditions.includes(key)}
+                        onChange={() =>
+                          toggleValue(key, conditions, setConditions)
+                        }
+                      />
+
+                      <span className={styles.customCheckbox}>
+                        <img src="/checkbox.svg" alt="" />
+                      </span>
+
+                      <span>{conditionLabels[key]}</span>
+                    </label>
+                  ),
+                )}
 
                 <button
                   type="button"
@@ -405,68 +427,6 @@ export default function PublicUserPage() {
         </div>
 
         <div className={styles.toolbar}>
-          <div className={styles.transferWrap} ref={transferRef}>
-            <button
-              type="button"
-              className={styles.transferTrigger}
-              aria-expanded={transferOpen}
-              onClick={() => {
-                setTransferOpen((open) => !open);
-                setFilterOpen(false);
-              }}
-            >
-              {transfer.length === 0
-                ? "Все объявления"
-                : transfer.length === 1
-                  ? transfer[0] === "exchange"
-                    ? "Обмен"
-                    : "Бесплатно"
-                  : "Все объявления"}
-
-              <img
-                src="/strelka.svg"
-                alt=""
-                className={`${styles.arrow} ${
-                  transferOpen ? styles.arrowOpen : ""
-                }`}
-              />
-            </button>
-
-            {transferOpen && (
-              <div className={styles.transferMenu}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTransfer([]);
-                    setTransferOpen(false);
-                  }}
-                >
-                  Все объявления
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTransfer(["exchange"]);
-                    setTransferOpen(false);
-                  }}
-                >
-                  Обмен
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTransfer(["free"]);
-                    setTransferOpen(false);
-                  }}
-                >
-                  Бесплатно
-                </button>
-              </div>
-            )}
-          </div>
-
           <span className={styles.resultCount}>
             Найдено: {ads.length}
           </span>
@@ -474,7 +434,10 @@ export default function PublicUserPage() {
 
         <div className={styles.cards}>
           {ads.map((ad) => (
-            <article className={styles.adCard} key={ad.id}>
+            <article
+              className={styles.adCard}
+              key={ad.id}
+            >
               <div className={styles.photoArea}>
                 {ad.photo ? (
                   <img
@@ -497,17 +460,24 @@ export default function PublicUserPage() {
 
               <div className={styles.cardBody}>
                 <h3>{ad.title}</h3>
-                <p className={styles.description}>{ad.description}</p>
-                
-                <span className={styles.locationPin} title={ad.city}>
-                        <img src='/location.svg' alt="" />
-                        {ad.city}
+
+                <p className={styles.description}>
+                  {ad.description}
+                </p>
+
+                <span
+                  className={styles.locationPin}
+                  title={ad.city}
+                >
+                  <img src="/location.svg" alt="" />
+                  {ad.city}
                 </span>
 
                 <div className={styles.tags}>
                   <span className={styles.darkTag}>
                     {ad.transfer === "exchange" ? "Обмен" : "Бесплатно"}
                   </span>
+
                   <span>{categoryLabels[ad.category]}</span>
                   <span>{ad.subcategory}</span>
                   <span>{conditionLabels[ad.condition]}</span>

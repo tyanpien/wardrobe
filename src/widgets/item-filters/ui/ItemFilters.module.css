@@ -279,7 +279,7 @@
 }
 
 .checkRow input:checked + .customCheckbox {
-  border-color: #dff49a;
+  border-color: #1c1c1c;
   background: #dff49a;
 }
 
@@ -361,7 +361,7 @@
 
 .resultsCount {
   color: #77776f;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
 }
 
@@ -370,7 +370,7 @@
   border: 0;
   background: transparent;
   color: #242424;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s ease;

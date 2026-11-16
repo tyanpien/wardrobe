@@ -217,7 +217,7 @@ export default function CreateItemPage() {
     return (
       <main className={styles.page}>
         <div className={styles.successPanel}>
-          <div className={styles.successIcon}>✓</div>
+          <div className={styles.successIcon}><img src='/success.svg'/></div>
           <h1>Объявление опубликовано</h1>
           <p>Оно уже доступно в каталоге и в разделе «Мои объявления».</p>
           <div className={styles.successActions}>

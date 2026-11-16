@@ -1,0 +1,36 @@
+.page {
+    width: min(1340px, calc(100% - 64px));
+    margin: 32px auto 90px;
+    color: #1C1C1C;
+    display: grid;
+    grid-template-columns: 338px minmax(0, 1fr);
+    align-items: start;
+    gap: 22px;
+}
+
+.content {
+    min-width: 0;   
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin: 12px 0 26px;
+}
+
+.pageHeader h1 {
+    margin: 0;
+    font-size: clamp(26px, 2.3vw, 32px);
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.pageHeader p {
+    margin: 9px 0 0;
+    color: #96958B;
+    font-size: 16px;
+    line-height: 1.5;
+    width: 650px;
+}

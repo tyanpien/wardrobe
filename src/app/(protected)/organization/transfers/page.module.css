@@ -1,0 +1,253 @@
+.page {
+    width: min(1340px, calc(100% - 64px));
+    margin: 32px auto 90px;
+    color: #1C1C1C;
+    display: grid;
+    grid-template-columns: 338px minmax(0, 1fr);
+    align-items: start;
+    gap: 22px;
+  }
+  
+  .content {
+    min-width: 0;
+  }
+  
+  .pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin: 12px 0 26px;
+  }
+  
+  .pageHeader h1 {
+    margin: 0;
+    font-size: clamp(26px, 2.3vw, 32px);
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  
+  .pageHeader p {
+    margin: 9px 0 0;
+    color: #96958B;
+    font-size: 16px;
+    line-height: 1.5;
+    width: 650px;
+  }
+  
+  .backButton {
+    display: inline-block;
+    margin: 10px 0 16px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #96958B;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .backButton:hover {
+    color: #1c1c1c;
+  }
+  
+  .sectionHeading {
+    margin: 0 0 25px;
+  }
+  
+  .sectionHeading h1 {
+    margin: 0;
+    font-size: clamp(26px, 2.2vw, 32px);
+    line-height: 1.2;
+    font-weight: 700;
+  }
+    
+  .tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  
+  .tab {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+  
+  .tabActiveDark {
+    background-color: #3E2723;
+    color: #fff;
+  }
+  
+  .tabActiveLight {
+    background-color: #E7F9A9;
+    color: #2E2E2E;
+  }
+  
+  .transfersList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .transferCard {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .transferHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .transferHeader h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 650;
+  }
+  
+  .transferMeta {
+    margin: 0;
+    color: #96958B;
+    font-size: 14px;
+  }
+  
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  
+  .badgePendingOwner {
+    background-color: #3E2723;
+    color: #fff;
+  }
+  
+  .badgePendingOrg {
+    background-color: #E7F9A9;
+    color: #3E2723;
+    width: 202px;
+    padding: 6px 10px;
+  }
+  
+  .badgeCompleted {
+    background-color: #709255;
+    color: #fff;
+  }
+  
+  .confirmButton {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 12px 24px;
+    border: 0;
+    border-radius: 8px;
+    background-color: #7A9E5C;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  
+  .confirmButton:hover {
+    opacity: 0.9;
+  }
+  
+  .detailCard {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .detailTitle {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 650;
+  }
+  
+  .detailHint {
+    margin: 0;
+    color: #96958B;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  
+  .timelineItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+  }
+  
+  .timelineIconDone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #1C1C1C;
+  }
+  
+  .timelineIconPending {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    color: #96958B;
+  }
+  
+  .timelineText {
+    color: #1C1C1C;
+  }
+  
+  .timelineItem:last-child .timelineText {
+    color: #96958B;
+  }
+  
+  .muted {
+    color: #709255;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  @media (max-width: 1100px) {
+    .page {
+      grid-template-columns: 270px minmax(0, 1fr);
+      gap: 18px;
+    }
+  }
+  
+  @media (max-width: 800px) {
+    .page {
+      width: calc(100% - 32px);
+      grid-template-columns: 1fr;
+      margin-top: 22px;
+    }
+  }

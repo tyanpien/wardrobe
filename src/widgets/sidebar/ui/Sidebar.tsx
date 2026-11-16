@@ -1,27 +1,72 @@
 import Link from "next/link";
 import styles from "./Sidebar.module.css";
 
-const CABINET_LINKS = [
-  { href: "/profile", label: "Профиль" },
-  { href: "/my-items", label: "Мои вещи" },
-  { href: "/requests", label: "Запросы" },
-  { href: "/messages", label: "Сообщения" },
-  { href: "/notifications", label: "Уведомления" },
-  { href: "/eco", label: "Эко-трекер" },
-  { href: "/volunteer/my", label: "Волонтерский раздел" },
-  { href: "/organization", label: "Раздел организации" },
+type SidebarLink = {
+  href: string;
+  label: string;
+  key?: string;
+};
+
+type SidebarProps = {
+  variant?: "user" | "organization";
+  activePage?: string;
+};
+
+const ORGANIZATION_LINKS: SidebarLink[] = [
+  { href: "/organization", label: "Страница организации", key: "overview" },
+  { href: "/organization/transfers", label: "Передачи", key: "transfers" },
+  { href: "/messages", label: "Сообщения", key: "messages" },
+  { href: "/organization/employees", label: "Сотрудники", key: "employees" },
+  { href: "/organization/volunteer", label: "Волонтёрство", key: "volunteer" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ variant = "user", activePage }: SidebarProps) {
+  const isOrganization = variant === "organization";
+  const links = ORGANIZATION_LINKS;
+
   return (
-    <aside className={styles.aside}>
+    <aside
+      className={`${styles.aside} ${
+        isOrganization ? styles.organizationAside : ""
+      }`}
+    >
+      {isOrganization && (
+        <div className={styles.organizationBrand}>
+          <div className={styles.organizationLogo} />
+          <div>
+            <strong>Добрые вещи</strong>
+            <span>Кабинет организации</span>
+          </div>
+        </div>
+      )}
+
       <nav className={styles.nav} aria-label="Кабинет">
-        {CABINET_LINKS.map((link) => (
-          <Link key={link.href} href={link.href} className={styles.link}>
-            {link.label}
-          </Link>
-        ))}
+        {links.map((link) => {
+          const isActive = isOrganization
+            ? activePage
+              ? link.key === activePage
+              : link.href === "/organization"
+            : false;
+
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`${styles.link} ${
+                isActive ? styles.activeLink : ""
+              }`}
+            >
+              {link.label}
+            </Link>
+          );
+        })}
       </nav>
+
+      {isOrganization && (
+        <Link href="/organizations" className={styles.publicLink}>
+          Открыть публичную страницу
+        </Link>
+      )}
     </aside>
   );
 }

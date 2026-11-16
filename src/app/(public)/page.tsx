@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Card, Container, PageHeader } from "@/shared/ui";
-import { MapView } from "@/widgets/map-view";
 import styles from "./home.module.css";
 
 export default function HomePage() {
@@ -42,7 +41,6 @@ export default function HomePage() {
           <p>Организация → волонтер: задача, отклик, назначение и выполнение.</p>
         </Card>
       </section>
-      <MapView title="Карта организаций и пунктов приема" />
     </Container>
   );
 }

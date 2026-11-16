@@ -1,18 +1,19 @@
 .header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 1000;
   background: #1c1c1c;
   color: #fff;
   border-radius: 0 0 32px 32px;
   width: min(1340px, calc(100% - 32px));
   margin: 0 auto;
+  isolation: isolate;
 }
 
 .inner {
   width: min(1270px, calc(100% - 32px));
   margin: 0 auto;
-  min-height: 54px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   gap: 24px;
@@ -20,60 +21,78 @@
 
 .logo {
   color: #fff;
-  font-family: 'Jura', sans-serif;
+  font-family: "Jura", sans-serif;
   font-weight: 700;
   font-size: 20px;
   white-space: nowrap;
   margin-right: auto;
+  flex-shrink: 0;
 }
 
 .nav {
   display: flex;
-  font-family: 'Inter', sans-serif;
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 32px;
+  font-family: "Inter", sans-serif;
   font-size: 16px;
+  white-space: nowrap;
 }
 
 .link {
   color: #f7f7f7;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 20px;
+  gap: 12px;
   margin-left: 2px;
+  flex-shrink: 0;
 }
 
 .iconLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
 }
 
 .iconLink img {
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   filter: brightness(0) invert(1);
+}
+
+.profileMenuWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0px;
+  flex-shrink: 0;
 }
 
 .profileLink {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   color: #fff;
+  text-decoration: none;
 }
 
 .avatar,
 .avatarFallback {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
   background: #d8d8d8;
@@ -83,40 +102,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #222;
-  font-size: 10px;
-}
-
-.chevron {
+  color: #1c1c1c;
   font-size: 14px;
-  line-height: 1;
-}
-
-.loginLink {
-  color: #fff;
-  font-size: 16px;
-}
-
-.profileMenuWrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.profileLink {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
 }
 
 .chevronButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 30px;
+  width: 48px;
+  height: 44px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -125,8 +120,9 @@
 
 .chevron {
   display: block;
-  width: 12px;
-  height: 12px;
+  margin-left: -18px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
   transition: transform 0.2s ease;
 }
@@ -135,38 +131,61 @@
   transform: rotate(180deg);
 }
 
+.loginLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #fff;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
 .profileDropdown {
   position: absolute;
-  top: calc(100% + 12px);
+  top: 100%; 
   right: 0;
+  margin-right: -18px; 
   z-index: 100;
-  width: 220px;
-  padding: 6px;
-  border: 1px solid #dedede;
-  border-radius: 9px;
-  background: #fff;
-  box-shadow: 0 6px 20px #0000001a;
+  width: 240px;
+  padding: 8px 0 6px 0;
+  border-radius: 0 0 32px 32px; 
+  background: #1C1C1C;
 }
 
 .profileDropdown a,
 .profileDropdown button {
   display: block;
   width: 100%;
-  padding: 11px 12px;
+  padding: 11px 16px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 0; 
   background: transparent;
-  color: #161616;
+  color: #FFFFFF;
   text-align: left;
   text-decoration: none;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   cursor: pointer;
 }
 
 .profileDropdown a:hover,
 .profileDropdown button:hover {
-  background: #f5f2dc;
+  color: #e6e5e5;
+}
+
+@media (max-width: 900px) {
+  .inner {
+    gap: 12px;
+  }
+
+  .nav {
+    gap: 16px;
+    font-size: 14px;
+  }
+
+  .actions {
+    gap: 6px;
+  }
 }
 
 @media (max-width: 700px) {
@@ -187,9 +206,10 @@
     width: 100%;
     justify-content: center;
     gap: 18px;
+    flex-wrap: wrap;
   }
 
   .actions {
-    gap: 12px;
+    gap: 6px;
   }
 }

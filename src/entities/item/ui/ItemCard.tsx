@@ -38,8 +38,6 @@ export function ItemCard({ item }: ItemCardProps) {
 
       <h3 className={styles.title}>{item.title}</h3>
 
-      <p className={styles.description}>{item.description}</p>
-
       <span className={styles.locationPin} title={item.city}>
         <img src="/location.svg" alt="" />
         {item.city}

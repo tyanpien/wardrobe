@@ -1,18 +1,108 @@
-.aside {
-  width: min(240px, 100%);
-  padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface);
-  height: fit-content;
+.organizationAside {
+  width: 338px;
+  min-width: 338px;
+  min-height: 620px;
+  padding: 22px;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 18px;
 }
 
-.nav {
+.organizationBrand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 10px;
+  margin-bottom: 9px;
+  border-bottom: 1px solid #e6e3d8;
+}
+
+.organizationLogo {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border-radius: 50%;
+  background: #E7F9A9;
+}
+
+.organizationBrand strong,
+.organizationBrand span {
+  display: block;
+}
+
+.organizationBrand strong {
+  color: #202020;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.organizationBrand span {
+  margin-top: 3px;
+  color: #96958B;
+  font-size: 14px;
+}
+
+.organizationAside .nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
-.link {
-  font-size: 14px;
+.organizationAside .link {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 10px;
+  color: #96958B;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.organizationAside .link:hover {
+  background: #f6f6ee;
+  color: #202020;
+}
+
+.organizationAside .activeLink {
+  background: #E7F9A9;
+  color: #202020;
+}
+
+.organizationAside .publicLink {
+  display: block;
+  margin-top: 35px;
+  color: #202020;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.organizationAside .publicLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .organizationAside {
+    width: 100%;
+    min-width: 0;
+    min-height: auto;
+  }
+
+  .organizationAside .nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .organizationAside .publicLink {
+    margin-top: 18px;
+  }
+}
+
+@media (max-width: 500px) {
+  .organizationAside .nav {
+    grid-template-columns: 1fr;
+  }
 }

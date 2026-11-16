@@ -327,7 +327,7 @@ export default function EditItemPage() {
     return (
       <main className={styles.page}>
         <div className={styles.successPanel}>
-          <div className={styles.successIcon}>✓</div>
+          <div className={styles.successIcon}><img src='/success.svg'/></div>
           <h1>Изменения сохранены</h1>
           <p>Объявление обновлено на сервере.</p>
           <div className={styles.successActions}>

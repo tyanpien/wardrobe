@@ -1,5 +1,8 @@
+"use clien";
+
 import "./globals.css";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import { Roboto, Jura, Inter } from "next/font/google";
 import { Header } from "@/widgets/header";
 import { Footer } from "@/widgets/footer";
@@ -27,13 +30,22 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <html lang="ru">
       <body className={`${roboto.className} ${jura.variable} ${inter.variable}`}>
         <Header />
         {children}
         <Footer />
+
+        <Script
+          src={`https://api-maps.yandex.ru/v3/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY}&lang=ru_RU`}
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
   );

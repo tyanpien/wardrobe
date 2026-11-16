@@ -1,0 +1,49 @@
+.panel {
+    width: min(470px, calc(100% - 24px));
+    margin: 24px auto 28px;
+    padding: 28px 30px;
+    border: 1px solid #49323e;
+    border-radius: 14px;
+    background: #fbfaf0;
+    color: #202020;
+    text-align: center;
+  }
+  
+  .panel h3 {
+    max-width: 340px;
+    margin: 0 auto 24px;
+    font-size: 17px;
+    line-height: 1.45;
+    font-weight: 600;
+  }
+  
+  .panel p {
+    margin: 8px 0 0;
+    color: #77736d;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .panel button,
+  .completedButton {
+    display: grid;
+    width: min(270px, 100%);
+    min-height: 50px;
+    margin: 0 auto;
+    place-items: center;
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 12px;
+    background: #1d1d1d;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+  }
+  
+  .panel button { cursor: pointer; }
+  .panel button:disabled { cursor: wait; opacity: .6; }
+  .completedButton { background: #709255; }
+  
+  @media (max-width: 600px) {
+    .panel { padding: 22px 18px; }
+  }
