@@ -1,0 +1,88 @@
+.page {
+    width: min(760px, calc(100% - 40px));
+    margin: 56px auto 90px;
+    color: #1c1c1c;
+  }
+  
+  .card {
+    padding: 36px;
+    background: #fff;
+    border-radius: 14px;
+  }
+  
+  .backLink {
+    color: #555;
+    text-decoration: none;
+    font-size: 14px;
+  }
+  
+  .card h1 {
+    margin: 24px 0 10px;
+    font-size: 30px;
+  }
+  
+  .description {
+    margin: 0 0 28px;
+    color: #666;
+    line-height: 1.5;
+  }
+  
+  .form {
+    display: grid;
+    gap: 20px;
+  }
+  
+  .field {
+    display: grid;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  
+  .field input {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 14px;
+    border: 1px solid #d5d5d5;
+    border-radius: 8px;
+    color: #1c1c1c;
+    font: inherit;
+    font-weight: 400;
+  }
+  
+  .field input:focus {
+    outline: 2px solid #c7df78;
+    border-color: #829b39;
+  }
+  
+  .error {
+    margin: 0;
+    color: #b42318;
+    font-size: 14px;
+  }
+  
+  .submitButton {
+    min-height: 48px;
+    padding: 12px 24px;
+    border: 0;
+    border-radius: 9px;
+    background: #1c1c1c;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+  }
+  
+  .submitButton:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  
+  @media (max-width: 600px) {
+    .card {
+      padding: 24px 18px;
+    }
+  
+    .card h1 {
+      font-size: 25px;
+    }
+  }

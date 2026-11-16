@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { http } from "./http";
 
@@ -53,6 +52,17 @@ export async function loginUser(
   const response = await http.post<AuthResponse>(
     "/api/v1/auth/login",
     data,
+  );
+
+  return response.data;
+}
+
+export async function refreshUser(
+  refreshToken: string,
+): Promise<AuthResponse> {
+  const response = await http.post<AuthResponse>(
+    "/api/v1/auth/refresh",
+    { refresh_token: refreshToken },
   );
 
   return response.data;

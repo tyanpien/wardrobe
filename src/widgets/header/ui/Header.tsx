@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -5,6 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./Header.module.css";
 import { getAvatarUrl } from "@/entities/user/api/profile";
+import { getMyOrganizations } from "@/entities/organization/api";
+import type { MyOrganization } from "@/entities/organization/model/dto";
+import { logoutUser } from "@/shared/api/auth";
 
 type SavedUser = {
   id?: string;
@@ -22,8 +26,12 @@ const NAV_LINKS = [
 
 export function Header() {
   const router = useRouter();
+
   const [user, setUser] = useState<SavedUser | null>(null);
+  const [organization, setOrganization] =
+    useState<MyOrganization | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,6 +56,53 @@ export function Header() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadOrganization() {
+      if (!user) {
+        setOrganization(null);
+        return;
+      }
+
+      try {
+        const organizations = await getMyOrganizations();
+
+        if (!cancelled) {
+          setOrganization(organizations[0] ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setOrganization(null);
+        }
+      }
+    }
+
+    void loadOrganization();
+
+    const refreshOrganization = () => {
+      void loadOrganization();
+    };
+
+    window.addEventListener(
+      "dobry-shkaf-organization-updated",
+      refreshOrganization
+    );
+
+    window.addEventListener("focus", refreshOrganization);
+
+    return () => {
+      cancelled = true;
+
+      window.removeEventListener(
+        "dobry-shkaf-organization-updated",
+        refreshOrganization
+      );
+
+      window.removeEventListener("focus", refreshOrganization);
+    };
+  }, [user]);
+
+  useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
       if (
         menuRef.current &&
@@ -64,20 +119,35 @@ export function Header() {
     };
   }, []);
 
-  function logout() {
-    localStorage.removeItem("dobry-shkaf-user");
-    localStorage.removeItem("dobry-shkaf-access-token");
-    localStorage.removeItem("dobry-shkaf-refresh-token");
-  
-    window.dispatchEvent(new Event("dobry-shkaf-user-updated"));
-  
-    setUser(null);
-    setMenuOpen(false);
-  
-    router.push("/login");
+  async function logout() {
+    const refreshToken = localStorage.getItem("dobry-shkaf-refresh-token");
+
+    try {
+      if (refreshToken) {
+        await logoutUser(refreshToken);
+      }
+    } catch (error) {
+      console.error("Не удалось завершить сессию на сервере:", error);
+    } finally {
+      localStorage.removeItem("dobry-shkaf-user");
+      localStorage.removeItem("dobry-shkaf-access-token");
+      localStorage.removeItem("dobry-shkaf-refresh-token");
+
+      window.dispatchEvent(new Event("dobry-shkaf-user-updated"));
+
+      setUser(null);
+      setOrganization(null);
+      setMenuOpen(false);
+
+      router.push("/login");
+    }
   }
 
   const publicUserId = user?.id || user?.email || "1";
+
+  const organizationHref = organization
+    ? "/organization"
+    : "/organization/create";
 
   return (
     <header className={styles.header}>
@@ -157,10 +227,20 @@ export function Header() {
               {menuOpen && (
                 <div className={styles.profileDropdown}>
                   <Link
-                    href={`/users/${encodeURIComponent(publicUserId)}`}
+                    href="/profile"
+                    aria-label="Личный кабинет"
+                    title="Личный кабинет"
+                  >
+                    Моя профиль
+                  </Link>
+
+                  <Link
+                    href={organizationHref}
                     onClick={() => setMenuOpen(false)}
                   >
-                    Моя публичная страница
+                    {organization
+                      ? "Управление организацией"
+                      : "Создать организацию"}
                   </Link>
 
                   <button type="button" onClick={logout}>

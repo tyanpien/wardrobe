@@ -26,6 +26,15 @@ import {
   subcategoryLabel,
   unpublishListing,
 } from "@/entities/item";
+import {
+  getMyOrganizations,
+  getOrganizationStatus,
+} from "@/entities/organization/api";
+
+import type {
+  MyOrganization,
+  OrganizationStatus,
+} from "@/entities/organization/model/dto";
 
 type Transfer = "exchange" | "free";
 type Status = ItemStatus;
@@ -55,6 +64,14 @@ export function ProfileDashboard() {
   const [ads, setAds] = useState<Item[]>([]);
   const [adsError, setAdsError] = useState("");
   const [adsLoading, setAdsLoading] = useState(true);
+  const [organizationStatus, setOrganizationStatus] =
+  useState<OrganizationStatus | null>(null);
+
+  const [myOrganizations, setMyOrganizations] =
+    useState<MyOrganization[]>([]);
+
+  const [organizationsLoading, setOrganizationsLoading] = useState(true);
+  const [organizationsError, setOrganizationsError] = useState("");
 
   const statusFilterRef = useRef<HTMLDivElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
@@ -73,6 +90,41 @@ export function ProfileDashboard() {
   ]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+  
+    async function loadOrganizations() {
+      setOrganizationsLoading(true);
+      setOrganizationsError("");
+  
+      try {
+        const [statusResult, organizationsResult] = await Promise.all([
+          getOrganizationStatus(),
+          getMyOrganizations(),
+        ]);
+  
+        if (cancelled) return;
+  
+        setOrganizationStatus(statusResult);
+        setMyOrganizations(organizationsResult);
+      } catch (error) {
+        if (cancelled) return;
+  
+        setOrganizationsError(getProfileErrorMessage(error));
+      } finally {
+        if (!cancelled) {
+          setOrganizationsLoading(false);
+        }
+      }
+    }
+  
+    void loadOrganizations();
+  
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -304,6 +356,97 @@ export function ProfileDashboard() {
           </strong>
           <span>спасено</span>
         </div>
+      </section>
+
+      <section
+        className={styles.organizationPanel}
+        aria-labelledby="my-organization-title"
+      >
+        <div className={styles.organizationPanelHeader}>
+          <div>
+            <h2 id="my-organization-title">Моя организация</h2>
+            <p>Управление организацией и её публичной страницей</p>
+          </div>
+
+          {organizationStatus && !organizationStatus.hasOrganization && (
+            <Link
+              href="/organization/create"
+              className={styles.organizationAction}
+            >
+              Создать организацию
+            </Link>
+          )}
+        </div>
+
+        {organizationsLoading ? (
+          <p className={styles.organizationMessage} role="status">
+            Загружаем данные организации...
+          </p>
+        ) : organizationsError ? (
+          <div className={styles.organizationError}>
+            <p role="alert">{organizationsError}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+            >
+              Повторить
+            </button>
+          </div>
+        ) : organizationStatus?.hasOrganization ? (
+          <div className={styles.organizationList}>
+            {(
+              myOrganizations.length
+                ? myOrganizations
+                : organizationStatus.organization
+                  ? [organizationStatus.organization]
+                  : []
+            ).map((organization) => (
+              <div
+                className={styles.organizationRow}
+                key={organization.id}
+              >
+                <div className={styles.organizationIdentity}>
+                  {organization.logoUrl ? (
+                    <img
+                      src={getAvatarUrl(organization.logoUrl)}
+                      alt=""
+                      className={styles.organizationLogo}
+                    />
+                  ) : (
+                    <div
+                      className={styles.organizationLogoFallback}
+                      aria-hidden="true"
+                    >
+                      {organization.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+
+                  <div>
+                    <strong>{organization.name}</strong>
+                    <span>
+                      {organization.city || "Город не указан"}
+                      {" · "}
+                      {organization.role === "representative"
+                        ? "Представитель"
+                        : "Сотрудник"}
+                    </span>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/organizations/${organization.id}`}
+                  className={styles.organizationAction}
+                >
+                  Открыть страницу
+                </Link>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className={styles.organizationMessage}>
+            Вы пока не связаны ни с одной организацией.
+          </p>
+        )}
       </section>
 
       {profileError && <p role="alert">{profileError}</p>}

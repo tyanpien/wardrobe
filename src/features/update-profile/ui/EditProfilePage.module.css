@@ -49,7 +49,9 @@
   
   .photoSection {
     display: flex;
-    justify-content: left;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
     margin: 0 0 46px 96px;
   }
   
@@ -202,6 +204,35 @@
     line-height: 1.5;
   }
   
+  .removeAvatarButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    padding: 8px 14px;
+    border: 1px solid #a12b2b;
+    border-radius: 7px;
+    background: transparent;
+    color: #a12b2b;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+  
+  .removeAvatarButton:hover {
+    background: #a12b2b;
+    color: #fff;
+  }
+  
+  .removeAvatarButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
   @media (max-width: 600px) {
     .page {
       padding: 24px 20px 48px;

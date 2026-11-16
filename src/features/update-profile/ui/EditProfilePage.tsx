@@ -1,4 +1,6 @@
+
 "use client";
+
 import { CitySelect } from "@/shared/ui/CitySelect/CitySelect";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +12,7 @@ import {
   type FormEvent,
 } from "react";
 import {
+  deleteMyAvatar,
   getAvatarUrl,
   getCities,
   getMyProfile,
@@ -43,6 +46,7 @@ export function EditProfilePage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,23 +96,27 @@ export function EditProfilePage() {
 
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-
+  
     if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setError("Выберите файл изображения.");
+  
+    const allowedFormats = ["image/jpeg", "image/png"];
+  
+    if (!allowedFormats.includes(file.type)) {
+      setError(
+        "Неподдерживаемый формат фотографии. Загрузите изображение в формате JPG или PNG.",
+      );
       event.target.value = "";
       return;
     }
-
+  
     if (file.size > 5 * 1024 * 1024) {
       setError("Размер фотографии не должен превышать 5 МБ.");
       event.target.value = "";
       return;
     }
-
+  
     const reader = new FileReader();
-
+  
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setProfile((current) => ({
@@ -119,12 +127,64 @@ export function EditProfilePage() {
         setError("");
       }
     };
-
+  
     reader.onerror = () => {
       setError("Не удалось прочитать фотографию. Попробуйте ещё раз.");
     };
-
+  
     reader.readAsDataURL(file);
+  }
+
+  async function handleDeleteAvatar() {
+    setError("");
+    setIsDeletingAvatar(true);
+
+    try {
+      const updatedProfile = await deleteMyAvatar();
+
+      setProfile((current) => ({
+        ...current,
+        name: updatedProfile.name ?? current.name,
+        city: updatedProfile.city ?? current.city,
+        about: updatedProfile.about ?? current.about,
+        photo: getAvatarUrl(updatedProfile.avatar_url),
+      }));
+
+      setSelectedAvatar(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      const rawUser = localStorage.getItem("dobry-shkaf-user");
+
+      let savedUser: Record<string, unknown> = {};
+
+      if (rawUser) {
+        try {
+          savedUser = JSON.parse(rawUser) as Record<string, unknown>;
+        } catch {
+          savedUser = {};
+        }
+      }
+
+      localStorage.setItem(
+        "dobry-shkaf-user",
+        JSON.stringify({
+          ...savedUser,
+          name: updatedProfile.name ?? "",
+          city: updatedProfile.city ?? "",
+          about: updatedProfile.about ?? "",
+          photo: getAvatarUrl(updatedProfile.avatar_url),
+        }),
+      );
+
+      window.dispatchEvent(new Event("dobry-shkaf-user-updated"));
+    } catch (deleteError) {
+      setError(getProfileErrorMessage(deleteError));
+    } finally {
+      setIsDeletingAvatar(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -143,7 +203,6 @@ export function EditProfilePage() {
         updatedProfile = await uploadMyAvatar(selectedAvatar);
       }
 
-
       const avatarUrl = getAvatarUrl(updatedProfile.avatar_url);
 
       setProfile({
@@ -152,13 +211,13 @@ export function EditProfilePage() {
         about: updatedProfile.about ?? "",
         photo: avatarUrl,
       });
-      
+
       const rawUser = localStorage.getItem("dobry-shkaf-user");
-      
+
       const savedUser = rawUser
         ? (JSON.parse(rawUser) as Record<string, unknown>)
         : {};
-      
+
       localStorage.setItem(
         "dobry-shkaf-user",
         JSON.stringify({
@@ -169,12 +228,11 @@ export function EditProfilePage() {
           photo: avatarUrl,
         }),
       );
-      
+
       window.dispatchEvent(new Event("dobry-shkaf-user-updated"));
-      
+
       router.push("/profile");
       router.refresh();
-      
     } catch (saveError) {
       setError(getProfileErrorMessage(saveError));
     } finally {
@@ -220,7 +278,7 @@ export function EditProfilePage() {
               className={styles.photoButton}
               onClick={() => fileInputRef.current?.click()}
               aria-label="Загрузить фотографию профиля"
-              disabled={isSaving}
+              disabled={isSaving || isDeletingAvatar}
             >
               {profile.photo ? (
                 <img
@@ -252,14 +310,27 @@ export function EditProfilePage() {
               )}
             </button>
 
+            {profile.photo && (
+              <button
+                type="button"
+                className={styles.removeAvatarButton}
+                onClick={() => void handleDeleteAvatar()}
+                disabled={isSaving || isDeletingAvatar}
+              >
+                {isDeletingAvatar
+                  ? "Удаление..."
+                  : "Удалить фотографию"}
+              </button>
+            )}
+
             <input
               ref={fileInputRef}
               className={styles.fileInput}
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,image/jpeg,image/png"
               onChange={handlePhotoChange}
               aria-label="Выберите фотографию"
-              disabled={isSaving}
+              disabled={isSaving || isDeletingAvatar}
             />
           </div>
 
@@ -278,7 +349,7 @@ export function EditProfilePage() {
                 }
                 maxLength={80}
                 required
-                disabled={isSaving}
+                disabled={isSaving || isDeletingAvatar}
               />
             </label>
 
@@ -286,10 +357,10 @@ export function EditProfilePage() {
               <span className={styles.fieldLabel}>Город</span>
               <CitySelect
                 name="city"
-                value={profile.city ?? ""}
+                value={profile.city}
                 cities={cities}
                 onChange={(city) => updateField("city", city)}
-                disabled={isSaving}
+                disabled={isSaving || isDeletingAvatar}
               />
             </label>
 
@@ -305,7 +376,7 @@ export function EditProfilePage() {
                 }
                 maxLength={1000}
                 rows={4}
-                disabled={isSaving}
+                disabled={isSaving || isDeletingAvatar}
               />
             </label>
           </div>
@@ -320,7 +391,7 @@ export function EditProfilePage() {
             <button
               className={styles.saveButton}
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || isDeletingAvatar}
             >
               {isSaving ? "Сохранение..." : "Сохранить"}
             </button>

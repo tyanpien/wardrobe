@@ -1,9 +1,6 @@
-import type { Item } from "@/entities/item";
 import type { Organization } from "@/entities/organization";
 import type { VolunteerTask } from "@/entities/volunteer-task";
 import type { EcoStats } from "@/entities/eco-stats";
-
-export const stubItems: Item[] = [];
 
 export const stubOrganizations: Organization[] = [
   {

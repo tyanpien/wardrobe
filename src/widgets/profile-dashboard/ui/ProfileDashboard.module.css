@@ -599,6 +599,135 @@
   cursor: not-allowed;
 }
 
+.organizationPanel {
+  margin: 0 0 34px;
+  padding: 24px 28px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.organizationPanelHeader,
+.organizationRow,
+.organizationIdentity {
+  display: flex;
+  align-items: center;
+}
+
+.organizationPanelHeader {
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.organizationPanelHeader h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+}
+
+.organizationPanelHeader p,
+.organizationMessage {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.organizationAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 18px;
+  border: 1px solid #1c1c1c;
+  border-radius: 8px;
+  color: #1c1c1c;
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.organizationList {
+  display: grid;
+  gap: 12px;
+}
+
+.organizationRow {
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #ededed;
+}
+
+.organizationIdentity {
+  min-width: 0;
+  gap: 12px;
+}
+
+.organizationIdentity > div:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.organizationIdentity strong {
+  font-size: 15px;
+}
+
+.organizationIdentity span {
+  color: #666;
+  font-size: 13px;
+}
+
+.organizationLogo,
+.organizationLogoFallback {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  object-fit: cover;
+}
+
+.organizationLogoFallback {
+  display: grid;
+  place-items: center;
+  background: #e8f9a8;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.organizationError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #b42318;
+  font-size: 14px;
+}
+
+.organizationError p {
+  margin: 0;
+}
+
+.organizationError button {
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .organizationPanel {
+    padding: 20px 16px;
+  }
+
+  .organizationPanelHeader,
+  .organizationRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .organizationAction {
+    width: 100%;
+  }
+}
 
 @media (max-width: 850px) {
   .page {

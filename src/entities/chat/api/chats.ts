@@ -1,6 +1,7 @@
 import { http } from "@/shared/api/http";
 import { authHeaders } from "@/shared/api/auth-headers";
 import { resolveMediaUrl } from "@/entities/item/model/mappers";
+import { getAvatarUrl } from "@/entities/user/api/profile";
 import type {
   ChatDetail,
   ChatDto,
@@ -43,8 +44,14 @@ function mapChat(dto: ChatDto): ChatDetail {
       ...dto.listing,
       image: dto.listing.image ? resolveMediaUrl(dto.listing.image) : null,
     },
-    owner: dto.owner,
-    participant: dto.participant,
+    owner: {
+      ...dto.owner,
+      avatar_url: getAvatarUrl(dto.owner.avatar_url),
+    },
+    participant: {
+      ...dto.participant,
+      avatar_url: getAvatarUrl(dto.participant.avatar_url),
+    },
     transfer: dto.transfer ? mapTransfer(dto.transfer) : null,
     canStartTransfer: dto.can_start_transfer,
     createdAt: dto.created_at,
@@ -78,7 +85,10 @@ export async function fetchMyChats(page = 1, pageSize = 100): Promise<ChatListIt
   return data.items.map((item): ChatListItem => ({
     id: item.id,
     listingId: item.listing_id,
-    otherUser: item.other_user,
+    otherUser: {
+      ...item.other_user,
+      avatar_url: getAvatarUrl(item.other_user.avatar_url),
+    },
     listing: {
       ...item.listing,
       image: item.listing.image ? resolveMediaUrl(item.listing.image) : null,

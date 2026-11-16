@@ -3,8 +3,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { Sidebar } from "@/widgets/sidebar/ui/Sidebar";
 import { fetchCategories } from "@/entities/item/api/listings";
+import {
+  getMyOrganizations,
+  getOrganizationDto,
+  getOrganizationStatus,
+  updateOrganizationGeneral,
+  updateOrganizationContacts,
+  updateOrganizationAcceptanceRules,
+  createOrganizationAddress,
+  updateOrganizationAddress,
+  deleteOrganizationAddress,
+  uploadOrganizationLogo,
+} from "@/entities/organization/api";
+import type { OrganizationDetailDto, AddressUpsertRequest } from "@/entities/organization/model/dto";
+import { getApiErrorMessage } from "@/shared/api/errors";
+import { env } from "@/shared/config/env";
 import type { CategoriesResponse } from "@/entities/item/api/listings";
 import styles from "./page.module.css";
+import { CitySelect } from "@/shared/ui/CitySelect/CitySelect";
+import { getCities } from "@/entities/user/api/profile";
 
 type OrganizationInfo = {
   name: string;
@@ -45,8 +62,6 @@ type OrganizationStorage = {
 
 type PageView = "overview" | "info" | "rules" | "points" | "point-form";
 
-const STORAGE_KEY = "dobry-shkaf-organization";
-
 const DAYS = [
   "Понедельник",
   "Вторник",
@@ -66,28 +81,133 @@ const DEFAULT_SCHEDULE: WorkDay[] = DAYS.map((day) => ({
 
 const INITIAL_DATA: OrganizationStorage = {
   info: {
-    name: "Добрые вещи",
-    description:
-      "Помогаем вещам находить новых хозяев. Принимаем одежду, обувь, детские вещи и предметы для дома в хорошем состоянии и передаём их людям, которым они нужны.",
-    about:
-      "Мы работаем в Екатеринбурге более 5 лет. Наша миссия — развивать культуру осознанного потребления и помогать тем, кто оказался в трудной жизненной ситуации.\n\nЕжемесячно мы собираем и распределяем более 2 тонн одежды и обуви. 80% вещей передаются подопечным благотворительных фондов, а оставшиеся 20% реализуются через сеть благотворительных магазинов для покрытия транспортных и складских расходов.",
-    phone: "+7 (343) 222-33-44",
-    email: "hello@dobro-vechi.ru",
+    name: "",
+    description: "",
+    about: "",
+    phone: "",
+    email: "",
     logo: "",
   },
   rules: {},
-  conditions: ["Новое", "Отличное", "Хорошее"],
-  requirements: "Чистые, сухие, пригодные к использованию",
+  conditions: [],
+  requirements: "",
   exclusions: "",
-  points: [
-    { id: "point-1", city: "Екатеринбург", address: "ул. Ленина, 15", schedule: DEFAULT_SCHEDULE },
-    { id: "point-2", city: "Екатеринбург", address: "ул. Победы, 42", schedule: DEFAULT_SCHEDULE },
-    { id: "point-3", city: "Екатеринбург", address: "ул. Татищева, 88", schedule: DEFAULT_SCHEDULE },
-  ],
+  points: [],
 };
 
 const DAYS_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const CONDITIONS = ["Новое", "Отличное", "Хорошее", "Требует ремонта"];
+
+const API_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+
+type ApiScheduleDay = { is_open?: boolean; from?: string | null; to?: string | null };
+
+function clampTimeInput(raw: string): string {
+  let value = raw.replace(/[^\d:]/g, "");
+
+  if (!value) return "";
+
+  const hasColon = value.includes(":");
+  if (!hasColon && value.length > 2) {
+    value = `${value.slice(0, 2)}:${value.slice(2)}`;
+  }
+
+  const [rawHours, rawMinutes = ""] = value.split(":");
+  let hours = rawHours.slice(0, 2);
+  let minutes = rawMinutes.slice(0, 2);
+
+  if (hours.length === 2) {
+    const h = Number(hours);
+    if (Number.isNaN(h)) hours = "";
+    else if (h > 23) hours = "23";
+  }
+
+  if (minutes.length === 2) {
+    const m = Number(minutes);
+    if (Number.isNaN(m)) minutes = "";
+    else if (m > 59) minutes = "59";
+  }
+
+  if (value.endsWith(":") && minutes === "") return `${hours}:`;
+  if (minutes !== "") return `${hours}:${minutes}`;
+  return hours;
+}
+
+function normalizeTimeTo(raw: string): string {
+  const clamped = clampTimeInput(raw);
+  if (!/^\d{1,2}:\d{2}$/.test(clamped)) return clamped;
+
+  const [hStr, mStr] = clamped.split(":");
+  const h = Number(hStr);
+  const m = Number(mStr);
+
+  if (h > 23 || (h === 23 && m > 59)) return "23:59";
+  return clamped;
+}
+
+function mapOrganizationDto(dto: OrganizationDetailDto): OrganizationStorage {
+  const rules: Record<string, CategoryRule> = {};
+  dto.acceptance_rules.categories.forEach((category) => {
+    rules[category.name] = { enabled: true, subcategories: category.subcategories };
+  });
+
+  return {
+    info: {
+      name: dto.name,
+      description: dto.description ?? "",
+      about: dto.about ?? "",
+      phone: dto.phone ?? "",
+      email: dto.email,
+      logo: dto.logo_url
+        ? dto.logo_url.startsWith("data:") || /^https?:\/\//i.test(dto.logo_url)
+          ? dto.logo_url
+          : new URL(dto.logo_url, env.apiUrl).toString()
+        : "",
+    },
+    rules,
+    conditions: dto.acceptance_rules.conditions ?? [],
+    requirements: dto.acceptance_rules.additional_requirements ?? "",
+    exclusions: (dto.acceptance_rules.not_accepted ?? []).join("\n"),
+    points: dto.addresses.map((address) => {
+      const rawSchedule = (address.schedule ?? {}) as Record<string, ApiScheduleDay>;
+      return {
+        id: address.id,
+        city: address.city,
+        address: address.address_line,
+        schedule: DAYS.map((day, index) => {
+          const apiDay = rawSchedule[API_DAYS[index]] ?? {};
+          return {
+            day,
+            enabled: Boolean(apiDay.is_open),
+            from: apiDay.from ?? "10:00",
+            to: apiDay.to ?? "19:00",
+          };
+        }),
+      };
+    }),
+  };
+}
+
+function mapPointToRequest(point: ReceptionPoint, sortOrder: number): AddressUpsertRequest {
+  const schedule = Object.fromEntries(
+    API_DAYS.map((apiDay, index) => {
+      const day = point.schedule[index];
+      return [apiDay, {
+        is_open: day.enabled,
+        from: day.enabled ? day.from : null,
+        to: day.enabled ? day.to : null,
+      }];
+    }),
+  ) as AddressUpsertRequest["schedule"];
+
+  return {
+    title: point.address.trim(),
+    address_line: point.address.trim(),
+    city: point.city.trim(),
+    schedule,
+    sort_order: sortOrder,
+  };
+}
 
 function createEmptyPoint(): ReceptionPoint {
   return {
@@ -125,37 +245,90 @@ export default function OrganizationPage() {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState("");
   const [editingPoint, setEditingPoint] = useState<ReceptionPoint | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [viewerPermissions, setViewerPermissions] = useState<string[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [pendingLogo, setPendingLogo] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [infoErrors, setInfoErrors] = useState({ phone: "", email: "" });
+  const canEditGeneral = viewerPermissions.includes("edit_profile") || viewerPermissions.includes("edit_general_info");
+  const canEditContacts = viewerPermissions.includes("edit_profile") || viewerPermissions.includes("edit_contacts");
+  const canEditRules = viewerPermissions.includes("edit_profile") || viewerPermissions.includes("edit_acceptance_rules");
+  const canEditAddresses = viewerPermissions.includes("edit_profile") || viewerPermissions.includes("edit_addresses");
 
   const [pointErrors, setPointErrors] = useState({ city: "", address: "" });
 
+  const [cities, setCities] = useState<string[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(true);
+  const [citiesError, setCitiesError] = useState("");
+
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Partial<OrganizationStorage>;
-        setData({
-          ...INITIAL_DATA,
-          ...parsed,
-          info: { ...INITIAL_DATA.info, ...parsed.info },
-          rules: parsed.rules ?? {},
-          conditions: parsed.conditions ?? INITIAL_DATA.conditions,
-          points: parsed.points ?? INITIAL_DATA.points,
-        });
+    let cancelled = false;
+
+    async function loadCities() {
+      setCitiesLoading(true);
+      setCitiesError("");
+
+      try {
+        const cityList = await getCities();
+
+        if (cancelled) return;
+
+        setCities(cityList);
+      } catch {
+        if (cancelled) return;
+
+        setCitiesError(
+          "Не удалось загрузить список городов. Проверь подключение к серверу."
+        );
+      } finally {
+        if (!cancelled) {
+          setCitiesLoading(false);
+        }
       }
-    } catch {
-      console.error("Не удалось загрузить данные кабинета организации");
-    } finally {
-      setHydrated(true);
     }
+
+    void loadCities();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data, hydrated]);
+    let cancelled = false;
+
+    async function loadOrganization() {
+      setInitialLoading(true);
+      setPageError("");
+      try {
+        const [status, organizations] = await Promise.all([
+          getOrganizationStatus(),
+          getMyOrganizations(),
+        ]);
+        const membership = organizations[0] ?? status.organization;
+        if (!status.hasOrganization || !membership) {
+          throw new Error("У вашего аккаунта пока нет связанной организации.");
+        }
+
+        const dto = await getOrganizationDto(membership.id);
+        if (cancelled) return;
+        setOrganizationId(dto.id);
+        setViewerPermissions(dto.viewer_permissions ?? []);
+        setData(mapOrganizationDto(dto));
+      } catch (error) {
+        if (!cancelled) setPageError(getApiErrorMessage(error));
+      } finally {
+        if (!cancelled) setInitialLoading(false);
+      }
+    }
+
+    void loadOrganization();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -187,14 +360,17 @@ export default function OrganizationPage() {
   const openInfo = () => {
     setDraftInfo({ ...data.info });
     setInfoErrors({ phone: "", email: "" });
+    setPendingLogo(null);
+    setSaveError("");
     setView("info");
   };
 
-  const saveInfo = () => {
+  const saveInfo = async () => {
+    if (!organizationId) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmailValid = emailRegex.test(draftInfo.email);
+    const isEmailValid = !canEditContacts || emailRegex.test(draftInfo.email.trim());
     const phoneDigits = draftInfo.phone.replace(/\D/g, "");
-    const isPhoneValid = phoneDigits.length === 11 && phoneDigits.startsWith("7");
+    const isPhoneValid = !canEditContacts || phoneDigits.length === 11 && phoneDigits.startsWith("7");
 
     if (!isEmailValid || !isPhoneValid) {
       setInfoErrors({
@@ -204,8 +380,35 @@ export default function OrganizationPage() {
       return;
     }
 
-    setData((current) => ({ ...current, info: draftInfo }));
-    setView("overview");
+    setSaving(true);
+    setSaveError("");
+    try {
+      if (canEditGeneral) {
+        await updateOrganizationGeneral(organizationId, {
+          name: draftInfo.name.trim(),
+          description: draftInfo.description.trim() || null,
+          about: draftInfo.about.trim() || null,
+        });
+        if (pendingLogo) {
+          await uploadOrganizationLogo(organizationId, pendingLogo);
+        }
+      }
+      if (canEditContacts) {
+        await updateOrganizationContacts(organizationId, {
+          phone: draftInfo.phone.trim(),
+          email: draftInfo.email.trim(),
+        });
+      }
+      const dto = await getOrganizationDto(organizationId);
+      setData(mapOrganizationDto(dto));
+      setViewerPermissions(dto.viewer_permissions ?? []);
+      setPendingLogo(null);
+      setView("overview");
+    } catch (error) {
+      setSaveError(getApiErrorMessage(error, "Не удалось сохранить информацию организации."));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openRules = () => {
@@ -213,18 +416,32 @@ export default function OrganizationPage() {
     setDraftConditions([...data.conditions]);
     setDraftRequirements(data.requirements);
     setDraftExclusions(data.exclusions);
+    setSaveError("");
     setView("rules");
   };
 
-  const saveRules = () => {
-    setData((current) => ({
-      ...current,
-      rules: draftRules,
-      conditions: draftConditions,
-      requirements: draftRequirements,
-      exclusions: draftExclusions,
-    }));
-    setView("overview");
+  const saveRules = async () => {
+    if (!organizationId) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const categoriesPayload = Object.entries(draftRules)
+        .filter(([, rule]) => rule.enabled)
+        .map(([name, rule]) => ({ name, subcategories: rule.subcategories }));
+      await updateOrganizationAcceptanceRules(organizationId, {
+        categories: categoriesPayload,
+        conditions: draftConditions,
+        additional_requirements: draftRequirements.trim() || null,
+        not_accepted: draftExclusions.split(/\n|;/).map((item) => item.trim()).filter(Boolean),
+      });
+      const dto = await getOrganizationDto(organizationId);
+      setData(mapOrganizationDto(dto));
+      setView("overview");
+    } catch (error) {
+      setSaveError(getApiErrorMessage(error, "Не удалось сохранить правила приёма."));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleCategory = (categoryName: string) => {
@@ -266,12 +483,14 @@ export default function OrganizationPage() {
   };
 
   const openNewPoint = () => {
+    setSaveError("");
     setEditingPoint(createEmptyPoint());
     setPointErrors({ city: "", address: "" });
     setView("point-form");
   };
 
   const openPointEdit = (point: ReceptionPoint) => {
+    setSaveError("");
     setEditingPoint({
       ...point,
       schedule: point.schedule.map((day) => ({ ...day })),
@@ -280,53 +499,43 @@ export default function OrganizationPage() {
     setView("point-form");
   };
 
-  const savePoint = () => {
+  const savePoint = async () => {
+    if (!organizationId || !editingPoint) return;
     const errors = { city: "", address: "" };
-    let hasError = false;
+    if (!editingPoint.city.trim()) errors.city = "Введите город";
+    const addressValue = editingPoint.address.trim();
+    if (!addressValue) errors.address = "Введите адрес";
+    else if (!/\d/.test(addressValue)) errors.address = "Укажите номер дома (например, ул. Ленина, 15)";
+    if (errors.city || errors.address) { setPointErrors(errors); return; }
 
-    if (!editingPoint?.city.trim()) {
-      errors.city = "Введите город";
-      hasError = true;
-    }
-
-    const addressValue = editingPoint?.address.trim() || "";
-    
-    if (!addressValue) {
-      errors.address = "Введите адрес";
-      hasError = true;
-    } else if (!/\d/.test(addressValue)) {
-      errors.address = "Укажите номер дома (например, ул. Ленина, 15)";
-      hasError = true;
-    }
-
-    if (hasError) {
-      setPointErrors(errors);
-      return;
-    }
-
-    setData((current) => {
-      const exists = current.points.some((point) => point.id === editingPoint!.id);
-      return {
-        ...current,
-        points: exists
-          ? current.points.map((point) =>
-              point.id === editingPoint!.id ? editingPoint! : point
-            )
-          : [...current.points, editingPoint!],
-      };
-    });
-
-    setEditingPoint(null);
-    setPointErrors({ city: "", address: "" });
-    setView("points");
+    setSaving(true);
+    setSaveError("");
+    try {
+      const exists = data.points.some((point) => point.id === editingPoint.id);
+      const payload = mapPointToRequest(editingPoint, exists ? data.points.findIndex((point) => point.id === editingPoint.id) : data.points.length);
+      if (exists) await updateOrganizationAddress(organizationId, editingPoint.id, payload);
+      else await createOrganizationAddress(organizationId, payload);
+      const dto = await getOrganizationDto(organizationId);
+      setData(mapOrganizationDto(dto));
+      setEditingPoint(null);
+      setPointErrors({ city: "", address: "" });
+      setView("points");
+    } catch (error) {
+      setSaveError(getApiErrorMessage(error, "Не удалось сохранить пункт приёма."));
+    } finally { setSaving(false); }
   };
 
-  const deletePoint = (id: string) => {
-    if (!window.confirm("Удалить этот пункт приёма?")) return;
-    setData((current) => ({
-      ...current,
-      points: current.points.filter((point) => point.id !== id),
-    }));
+  const deletePoint = async (id: string) => {
+    if (!organizationId || !window.confirm("Удалить этот пункт приёма?")) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      await deleteOrganizationAddress(organizationId, id);
+      const dto = await getOrganizationDto(organizationId);
+      setData(mapOrganizationDto(dto));
+    } catch (error) {
+      setSaveError(getApiErrorMessage(error, "Не удалось удалить пункт приёма."));
+    } finally { setSaving(false); }
   };
 
   const updatePointDay = (index: number, field: keyof WorkDay, value: string | boolean) => {
@@ -345,13 +554,12 @@ export default function OrganizationPage() {
   const uploadLogo = (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert("Выбери файл изображения");
+      setSaveError("Выберите файл изображения.");
       return;
     }
+    setPendingLogo(file);
     const reader = new FileReader();
-    reader.onload = () => {
-      setDraftInfo((current) => ({ ...current, logo: String(reader.result) }));
-    };
+    reader.onload = () => setDraftInfo((current) => ({ ...current, logo: String(reader.result) }));
     reader.readAsDataURL(file);
   };
 
@@ -400,26 +608,48 @@ export default function OrganizationPage() {
 
   return (
     <main className={styles.page}>
-      <Sidebar 
-        variant="organization" 
+      <Sidebar
+        variant="organization"
         activePage={
-          view === "overview" || view === "info" || view === "rules" || view === "points" || view === "point-form" 
-            ? "overview" 
+          view === "overview" || view === "info" || view === "rules" || view === "points" || view === "point-form"
+            ? "overview"
             : undefined
-        } 
+        }
       />
 
       <section className={styles.content}>
-        {view === "overview" && (
+        {initialLoading && <p className={styles.muted} role="status">Загружаем данные организации…</p>}
+        {!initialLoading && pageError && (
+          <div className={styles.emptyState} role="alert">
+            <p>{pageError}</p>
+            <button type="button" onClick={() => window.location.reload()}>Повторить</button>
+          </div>
+        )}
+        {!initialLoading && !pageError && saveError && <p className={styles.errorText} role="alert">{saveError}</p>}
+        {!initialLoading && !pageError && view === "overview" && (
           <>
             <header className={styles.pageHeader}>
               <div>
                 <h1>Страница организации</h1>
                 <p>Основная информация, правила приёма и пункты, которые видят пользователи.</p>
               </div>
-              <button type="button" className={styles.editButton} onClick={openInfo}>
-                Редактировать
-              </button>
+
+              <div className={styles.permissionAction}>
+                <button
+                  type="button"
+                  className={styles.editButton}
+                  onClick={openInfo}
+                  disabled={!canEditGeneral && !canEditContacts}
+                >
+                  Редактировать
+                </button>
+
+                {!canEditGeneral && !canEditContacts && (
+                  <p className={styles.permissionHint1}>
+                    У вас недостаточно прав для редактирования информации организации
+                  </p>
+                )}
+              </div>
             </header>
 
             <section className={styles.infoCard}>
@@ -451,9 +681,23 @@ export default function OrganizationPage() {
                 <span className={styles.pill}>Правила приёма</span>
                 <span className={styles.summaryText}>{selectedCategoriesCount} категорий</span>
               </div>
-              <button type="button" className={styles.textButton} onClick={openRules}>
-                Редактировать <span>→</span>
-              </button>
+
+              <div className={styles.permissionAction}>
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={openRules}
+                  disabled={!canEditRules}
+                >
+                  Редактировать <span>→</span>
+                </button>
+
+                {!canEditRules && (
+                  <p className={styles.permissionHint}>
+                    У вас недостаточно прав для редактирования правил приёма
+                  </p>
+                )}
+              </div>
             </section>
 
             <section className={styles.summaryCard}>
@@ -470,14 +714,28 @@ export default function OrganizationPage() {
                     ` · ${data.points.map((point) => point.city ? `${point.city}, ${point.address}` : point.address).join(" · ")}`}
                 </span>
               </div>
-              <button type="button" className={styles.textButton} onClick={() => setView("points")}>
-                Управлять <span>→</span>
-              </button>
+
+              <div className={styles.permissionAction}>
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={() => setView("points")}
+                  disabled={!canEditAddresses}
+                >
+                  Управлять <span>→</span>
+                </button>
+
+                {!canEditAddresses && (
+                  <p className={styles.permissionHint}>
+                    У вас недостаточно прав для управления пунктами приёма
+                  </p>
+                )}
+              </div>
             </section>
           </>
         )}
 
-        {view === "info" && (
+        {!initialLoading && !pageError && view === "info" && (
           <>
             <button className={styles.backButton} onClick={backToOverview}>
               ← Страница организации
@@ -491,16 +749,19 @@ export default function OrganizationPage() {
             </div>
 
             <div className={styles.formPage}>
+              {!canEditGeneral && <p className={styles.errorText}>Нет разрешения на редактирование основной информации.</p>}
+              {!canEditContacts && <p className={styles.errorText}>Нет разрешения на редактирование контактов.</p>}
               <div className={styles.logoRow}>
                 <div className={styles.logoPreview}>
                   {draftInfo.logo ? <img src={draftInfo.logo} alt="Логотип организации" /> : null}
                 </div>
                 <div className={styles.logoControls}>
                   <strong>Логотип</strong>
-                  <label className={styles.uploadButton}>
+                  <label className={styles.uploadButton} aria-disabled={!canEditGeneral}>
                     Загрузить другой
                     <input
                       type="file"
+                      disabled={!canEditGeneral}
                       accept="image/*"
                       onChange={(event) => uploadLogo(event.target.files?.[0])}
                     />
@@ -512,6 +773,7 @@ export default function OrganizationPage() {
                 Название
                 <input
                   value={draftInfo.name}
+                  disabled={!canEditGeneral}
                   onChange={(event) => setDraftInfo({ ...draftInfo, name: event.target.value })}
                 />
               </label>
@@ -520,6 +782,7 @@ export default function OrganizationPage() {
                 Описание
                 <textarea
                   rows={4}
+                  disabled={!canEditGeneral}
                   value={draftInfo.description}
                   onChange={(event) =>
                     setDraftInfo({ ...draftInfo, description: event.target.value })
@@ -531,6 +794,7 @@ export default function OrganizationPage() {
                 О нас
                 <textarea
                   rows={7}
+                  disabled={!canEditGeneral}
                   value={draftInfo.about}
                   onChange={(event) => setDraftInfo({ ...draftInfo, about: event.target.value })}
                 />
@@ -541,6 +805,7 @@ export default function OrganizationPage() {
                 <input
                   className={infoErrors.phone ? styles.inputError : ""}
                   value={draftInfo.phone}
+                  disabled={!canEditContacts}
                   onChange={(event) => {
                     setDraftInfo({ ...draftInfo, phone: formatPhone(event.target.value) });
                     if (infoErrors.phone) setInfoErrors({ ...infoErrors, phone: "" });
@@ -553,6 +818,7 @@ export default function OrganizationPage() {
                 Email
                 <input
                   type="email"
+                  disabled={!canEditContacts}
                   className={infoErrors.email ? styles.inputError : ""}
                   value={draftInfo.email}
                   onChange={(event) => {
@@ -564,8 +830,8 @@ export default function OrganizationPage() {
               </label>
 
               <div className={styles.formActions}>
-                <button className={styles.saveButton} onClick={saveInfo}>
-                  Сохранить
+                <button className={styles.saveButton} onClick={() => void saveInfo()} disabled={saving || (!canEditGeneral && !canEditContacts)}>
+                  {saving ? "Сохраняем…" : "Сохранить"}
                 </button>
                 <button className={styles.cancelButton} onClick={backToOverview}>
                   Отмена
@@ -575,7 +841,7 @@ export default function OrganizationPage() {
           </>
         )}
 
-        {view === "rules" && (
+        {!initialLoading && !pageError && view === "rules" && (
           <>
             <button className={styles.backButton} onClick={backToOverview}>
               ← Страница организации
@@ -607,6 +873,7 @@ export default function OrganizationPage() {
                           <input
                             className={styles.checkbox}
                             type="checkbox"
+                            disabled={!canEditRules}
                             checked={enabled}
                             onChange={() => toggleCategory(category.name)}
                           />
@@ -620,6 +887,7 @@ export default function OrganizationPage() {
                                 <input
                                   className={styles.checkbox}
                                   type="checkbox"
+                                  disabled={!canEditRules}
                                   checked={rule?.subcategories.includes(subcategory) ?? false}
                                   onChange={() => toggleSubcategory(category.name, subcategory)}
                                 />
@@ -642,6 +910,7 @@ export default function OrganizationPage() {
                       <input
                         className={styles.checkbox}
                         type="checkbox"
+                        disabled={!canEditRules}
                         checked={draftConditions.includes(condition)}
                         onChange={() => toggleCondition(condition)}
                       />
@@ -655,6 +924,7 @@ export default function OrganizationPage() {
                 <h3>Дополнительные требования</h3>
                 <textarea
                   className={styles.ruleTextarea}
+                  disabled={!canEditRules}
                   rows={2}
                   value={draftRequirements}
                   onChange={(event) => setDraftRequirements(event.target.value)}
@@ -668,6 +938,7 @@ export default function OrganizationPage() {
                   Исключения
                   <textarea
                     className={styles.ruleTextarea}
+                    disabled={!canEditRules}
                     rows={2}
                     value={draftExclusions}
                     onChange={(event) => setDraftExclusions(event.target.value)}
@@ -677,8 +948,8 @@ export default function OrganizationPage() {
               </section>
 
               <div className={styles.formActions}>
-                <button className={styles.saveButton} onClick={saveRules}>
-                  Сохранить изменения
+                <button className={styles.saveButton} onClick={() => void saveRules()} disabled={saving || !canEditRules}>
+                  {saving ? "Сохраняем…" : "Сохранить изменения"}
                 </button>
                 <button className={styles.cancelButton} onClick={backToOverview}>
                   Отмена
@@ -688,7 +959,7 @@ export default function OrganizationPage() {
           </>
         )}
 
-        {view === "points" && (
+        {!initialLoading && !pageError && view === "points" && (
           <>
             <button className={styles.backButton} onClick={backToOverview}>
               ← Страница организации
@@ -699,7 +970,7 @@ export default function OrganizationPage() {
                 <h1>Пункты приёма</h1>
                 <p>Адреса и режим работы отображаются на публичной странице и карте.</p>
               </div>
-              <button className={styles.editButton} onClick={openNewPoint}>
+              <button className={styles.editButton} onClick={openNewPoint} disabled={!canEditAddresses}>
                 Добавить пункт
               </button>
             </div>
@@ -755,19 +1026,45 @@ export default function OrganizationPage() {
 
             <div className={styles.pointForm}>
               <div className={styles.addressField}>
-                <label className={styles.fieldLabel}>
-                  Город
-                  <input
-                    className={pointErrors.city ? styles.inputError : ""}
+                <div className={styles.fieldLabel} style={{ fontWeight: 400 }}>
+                  <span style={{ fontWeight: 600 }}>Город</span>
+
+                  <CitySelect
+                    name="city"
                     value={editingPoint.city}
-                    onChange={(event) => {
-                      setEditingPoint({ ...editingPoint, city: event.target.value });
-                      if (pointErrors.city) setPointErrors({ ...pointErrors, city: "" });
+                    cities={cities}
+                    disabled={
+                      !canEditAddresses ||
+                      citiesLoading ||
+                      Boolean(citiesError)
+                    }
+                    onChange={(city) => {
+                      setEditingPoint({
+                        ...editingPoint,
+                        city,
+                      });
+
+                      if (pointErrors.city) {
+                        setPointErrors({
+                          ...pointErrors,
+                          city: "",
+                        });
+                      }
                     }}
-                    placeholder="Введите город"
                   />
-                </label>
-                {pointErrors.city && <span className={styles.errorText}>{pointErrors.city}</span>}
+                </div>
+
+                {citiesLoading && (
+                  <span className={styles.hint}>Загружаем города...</span>
+                )}
+
+                {citiesError && (
+                  <span className={styles.errorText}>{citiesError}</span>
+                )}
+
+                {pointErrors.city && (
+                  <span className={styles.errorText}>{pointErrors.city}</span>
+                )}
               </div>
 
               <div className={styles.addressField}>
@@ -776,6 +1073,7 @@ export default function OrganizationPage() {
                   <input
                     className={pointErrors.address ? styles.inputError : ""}
                     value={editingPoint.address}
+                    disabled={!canEditAddresses}
                     onChange={(event) => {
                       setEditingPoint({ ...editingPoint, address: event.target.value });
                       if (pointErrors.address) setPointErrors({ ...pointErrors, address: "" });
@@ -807,6 +1105,7 @@ export default function OrganizationPage() {
                         <input
                           className={styles.checkbox}
                           type="checkbox"
+                          disabled={!canEditAddresses}
                           checked={day.enabled}
                           onChange={(event) =>
                             updatePointDay(index, "enabled", event.target.checked)
@@ -820,13 +1119,13 @@ export default function OrganizationPage() {
                           <div className={styles.timeField}>
                             <input
                               type="text"
+                              disabled={!canEditAddresses}
                               inputMode="numeric"
                               maxLength={5}
                               placeholder="--:--"
                               value={day.from}
                               onChange={(event) => {
-                                let val = event.target.value.replace(/[^\d:]/g, "");
-                                if (val.length === 2 && !val.includes(":")) val += ":";
+                                const val = clampTimeInput(event.target.value);
                                 updatePointDay(index, "from", val);
                               }}
                             />
@@ -835,13 +1134,13 @@ export default function OrganizationPage() {
                           <div className={styles.timeField}>
                             <input
                               type="text"
+                              disabled={!canEditAddresses}
                               inputMode="numeric"
                               maxLength={5}
                               placeholder="--:--"
                               value={day.to}
                               onChange={(event) => {
-                                let val = event.target.value.replace(/[^\d:]/g, "");
-                                if (val.length === 2 && !val.includes(":")) val += ":";
+                                const val = normalizeTimeTo(event.target.value);
                                 updatePointDay(index, "to", val);
                               }}
                             />
@@ -856,12 +1155,12 @@ export default function OrganizationPage() {
               </div>
 
               <p className={styles.hint}>
-                Если день включён, время начала и окончания обязательно.
+                Если день включён, время начала и окончания обязательно. Время окончания — не позже 23:59.
               </p>
 
               <div className={styles.formActions}>
-                <button className={styles.saveButton} onClick={savePoint}>
-                  Добавить пункт
+                <button className={styles.saveButton} onClick={() => void savePoint()} disabled={saving || !canEditAddresses}>
+                  {saving ? "Сохраняем…" : "Сохранить пункт"}
                 </button>
                 <button className={styles.cancelButton} onClick={() => setView("points")}>
                   Отмена

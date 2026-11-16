@@ -141,6 +141,18 @@ export async function fetchCatalog(query: ListingsQuery = {}): Promise<Paginated
   return mapListResponse(response.data);
 }
 
+export async function fetchUserListings(
+  userId: string,
+  page = 1,
+  pageSize = 100,
+): Promise<PaginatedItems> {
+  const response = await http.get<ListingListDto>(
+    `/api/v1/users/${encodeURIComponent(userId)}/listings`,
+    { params: { page, page_size: pageSize } },
+  );
+  return mapListResponse(response.data);
+}
+
 export async function fetchMyListings(query: ListingsQuery = {}): Promise<PaginatedItems> {
   const response = await http.get<ListingListDto>("/api/v1/listings/mine", {
     headers: authHeaders(),

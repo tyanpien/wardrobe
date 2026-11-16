@@ -27,7 +27,29 @@
     line-height: 1.2;
     font-weight: 700;
   }
+  .invitationActions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
   
+  .invitationActions .employeeAction {
+    white-space: nowrap;
+  }
+  
+  @media (max-width: 700px) {
+    .employeeCard {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  
+    .invitationActions {
+      width: 100%;
+      gap: 12px;
+    }
+  }
   .pageHeader p,
   .sectionHeading p {
     margin: 9px 0 0;

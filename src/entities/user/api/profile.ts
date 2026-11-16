@@ -1,3 +1,4 @@
+
 import axios from "axios";
 import { http } from "@/shared/api/http";
 import { env } from "@/shared/config";
@@ -12,6 +13,26 @@ export type UserProfile = {
   items_saved: number;
   created_at: string;
 };
+
+export type PublicUserProfile = {
+  id: string;
+  name: string;
+  city: string | null;
+  about: string | null;
+  avatar_url: string | null;
+  items_saved: number;
+  created_at: string;
+};
+
+export async function getPublicUser(
+  userId: string,
+): Promise<PublicUserProfile> {
+  const response = await http.get<PublicUserProfile>(
+    `/api/v1/users/${encodeURIComponent(userId)}`,
+  );
+
+  return response.data;
+}
 
 type CitiesResponse = {
   cities: string[];
@@ -58,33 +79,31 @@ export async function updateMyProfile(data: {
   return response.data;
 }
 
-
 export async function uploadMyAvatar(file: File): Promise<UserProfile> {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("dobry-shkaf-access-token")
-        : null;
-  
-    if (!token) {
-      throw new Error("Необходимо авторизоваться");
-    }
-  
-    const formData = new FormData();
-    formData.append("file", file);
-  
-    const response = await http.post<UserProfile>(
-      "/api/v1/profile/me/avatar",
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-  
-    return response.data;
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("dobry-shkaf-access-token")
+      : null;
+
+  if (!token) {
+    throw new Error("Необходимо авторизоваться");
   }
-  
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await http.post<UserProfile>(
+    "/api/v1/profile/me/avatar",
+    formData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return response.data;
+}
 
 export async function deleteMyAvatar(): Promise<UserProfile> {
   const response = await http.delete<UserProfile>(

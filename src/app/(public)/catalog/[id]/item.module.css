@@ -242,6 +242,20 @@
   width: 522px;
 }
 
+.sellerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.sellerLink:hover .sellerName,
+.sellerLink:focus-visible .sellerName {
+  color: #484848;
+}
+
 .sellerCard {
   display: flex;
   align-items: center;

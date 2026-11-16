@@ -31,6 +31,7 @@ export {
   fetchDictionaries,
   fetchListing,
   fetchMyListings,
+  fetchUserListings,
   getListingErrorMessage,
   publishListing,
   unpublishListing,

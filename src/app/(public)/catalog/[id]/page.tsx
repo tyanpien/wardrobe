@@ -13,7 +13,7 @@ import {
   subcategoryLabel,
   unpublishListing,
 } from "@/entities/item";
-import { getAvatarUrl } from "@/entities/user/api/profile";
+import { getAvatarUrl, getPublicUser } from "@/entities/user/api/profile";
 import { Container, EmptyState } from "@/shared/ui";
 import { EditItemActions } from "@/features/edit-item";
 import styles from "./item.module.css";
@@ -57,12 +57,21 @@ export default function ItemPage() {
         setIsOwner(owner);
         setActivePhoto(0);
 
-        if (owner) {
-          setSellerName(user?.name || "Вы");
-          setSellerPhoto(getAvatarUrl(user?.photo || null));
-        } else {
-          setSellerName(detail.ownerName || "Пользователь");
-          setSellerPhoto("");
+        // Данные автора объявления загружаем из публичного профиля,
+        // а не из localStorage текущего пользователя.
+        setSellerName("Пользователь");
+        setSellerPhoto("");
+
+        try {
+          const seller = await getPublicUser(detail.ownerId);
+          if (cancelled) return;
+          setSellerName(seller.name || "Пользователь");
+          setSellerPhoto(getAvatarUrl(seller.avatar_url));
+        } catch {
+          // Если профиль временно недоступен, само объявление всё равно показываем.
+          if (!cancelled) {
+            setSellerName(detail.ownerName || "Пользователь");
+          }
         }
       } catch (loadError) {
         if (cancelled) return;
@@ -280,7 +289,43 @@ export default function ItemPage() {
               <p>{item.description}</p>
             </div>
 
-            {isOwner ? (
+            {!isOwner && (
+              <div className={styles.sellerCard}>
+                <Link
+                  href={`/users/${encodeURIComponent(item.ownerId)}`}
+                  className={styles.sellerLink}
+                  aria-label={`Открыть профиль пользователя ${sellerName}`}
+                >
+                  {sellerPhoto ? (
+                    <img
+                      className={styles.sellerAvatar}
+                      src={sellerPhoto}
+                      alt={`Аватар пользователя ${sellerName}`}
+                    />
+                  ) : (
+                    <span className={styles.sellerAvatar} aria-hidden="true" />
+                  )}
+
+                  <span className={styles.sellerName}>{sellerName}</span>
+                </Link>
+
+                <button
+                  type="button"
+                  className={styles.messageButton}
+                  onClick={() => {
+                    if (!isUserAuthorized()) {
+                      router.push(`/login?from=${encodeURIComponent(chatHref)}`);
+                      return;
+                    }
+                    router.push(chatHref);
+                  }}
+                >
+                  Написать
+                </button>
+              </div>
+            )}
+
+            {isOwner && (
               <div className={styles.ownerActions}>
                 <EditItemActions
                   itemId={item.id}
@@ -292,42 +337,6 @@ export default function ItemPage() {
                     void handlePublish();
                   }}
                 />
-              </div>
-            ) : (
-              <div className={styles.sellerCard}>
-                {sellerPhoto ? (
-                  <img
-                    className={styles.sellerAvatar}
-                    src={sellerPhoto}
-                    alt=""
-                  />
-                ) : (
-                  <span
-                    className={styles.sellerAvatar}
-                    aria-hidden="true"
-                  />
-                )}
-
-                <span className={styles.sellerName}>
-                  {sellerName}
-                </span>
-
-                <button
-                  type="button"
-                  className={styles.messageButton}
-                  onClick={() => {
-                    if (!isUserAuthorized()) {
-                      router.push(
-                        `/login?from=${encodeURIComponent(chatHref)}`,
-                      );
-                      return;
-                    }
-                  
-                    router.push(chatHref);
-                  }}
-                >
-                  Написать
-                </button>
               </div>
             )}
           </section>

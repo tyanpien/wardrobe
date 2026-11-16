@@ -7,7 +7,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import styles from "./page.module.css";
 
-import { getAvatarUrl } from "@/entities/user/api/profile";
+import {
+  getAvatarUrl,
+  getProfileErrorMessage,
+  getPublicUser,
+  type PublicUserProfile,
+} from "@/entities/user/api/profile";
+import { fetchUserListings } from "@/entities/item";
+import type { Item } from "@/entities/item";
 import { CategorySelect } from "@/shared/ui/CategorySelect/CategorySelect";
 
 import type {
@@ -20,107 +27,24 @@ import {
   ITEM_CATEGORY_LABELS,
   ITEM_CONDITION_LABELS,
   getSubcategoryOptions,
+  subcategoryLabel,
 } from "@/entities/item";
 
 type Transfer = "exchange" | "free";
 type Category = ItemCategory;
 type Condition = ItemCondition;
 
-type SavedUser = {
-  id?: string;
-  name?: string;
-  city?: string;
-  photo?: string;
-  email?: string;
-  about?: string;
-};
-
-type Ad = {
-  id: number;
-  title: string;
-  description: string;
-  transfer: Transfer;
-  category: Category;
-  subcategory: string;
-  condition: Condition;
-  city: string;
-  photo?: string;
-};
-
 const categoryLabels = ITEM_CATEGORY_LABELS;
 const conditionLabels = ITEM_CONDITION_LABELS;
-
-const initialAds: Ad[] = [
-  {
-    id: 1,
-    title: "Заголовок объявления",
-    description:
-      "Описание объявления. Вещь в хорошем состоянии, готова к передаче новому владельцу.",
-    transfer: "exchange",
-    category: "shoes",
-    subcategory: "Демисезонная",
-    condition: "good",
-    city: "Екатеринбург",
-  },
-  {
-    id: 2,
-    title: "Верхняя одежда",
-    description:
-      "Теплая и удобная вещь. Бережно использовалась, без заметных дефектов.",
-    transfer: "free",
-    category: "clothing",
-    subcategory: "Верхняя одежда",
-    condition: "excellent",
-    city: "Екатеринбург",
-  },
-  {
-    id: 3,
-    title: "Детские вещи",
-    description:
-      "Детская одежда, которая больше не подходит по размеру. Ищет нового владельца.",
-    transfer: "exchange",
-    category: "kids",
-    subcategory: "Детская одежда",
-    condition: "new",
-    city: "Екатеринбург",
-  },
-  {
-    id: 4,
-    title: "Сумка на каждый день",
-    description: "Практичная сумка. Есть небольшие следы использования.",
-    transfer: "free",
-    category: "accessories",
-    subcategory: "Сумки и рюкзаки",
-    condition: "good",
-    city: "Екатеринбург",
-  },
-  {
-    id: 5,
-    title: "Постельное белье",
-    description: "Комплект домашнего текстиля в отличном состоянии.",
-    transfer: "exchange",
-    category: "home_textile",
-    subcategory: "Постельное белье",
-    condition: "excellent",
-    city: "Екатеринбург",
-  },
-  {
-    id: 6,
-    title: "Летняя обувь",
-    description: "Легкая обувь для теплой погоды.",
-    transfer: "free",
-    category: "shoes",
-    subcategory: "Летняя",
-    condition: "needs_repair",
-    city: "Екатеринбург",
-  },
-];
 
 export default function PublicUserPage() {
   const params = useParams<{ id: string }>();
   const userId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  const [user, setUser] = useState<SavedUser | null>(null);
+  const [user, setUser] = useState<PublicUserProfile | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [transfer, setTransfer] = useState<Transfer[]>([]);
   const [category, setCategory] = useState<Category | "">("");
@@ -134,25 +58,49 @@ export default function PublicUserPage() {
   const transferRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const readUser = () => {
+    if (!userId) {
+      setError("Не удалось определить пользователя.");
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadProfile() {
+      setLoading(true);
+      setError(null);
+
       try {
-        const raw = localStorage.getItem("dobry-shkaf-user");
-        setUser(raw ? (JSON.parse(raw) as SavedUser) : null);
-      } catch {
-        setUser(null);
+        const profile = await getPublicUser(userId);
+        if (cancelled) return;
+        setUser(profile);
+
+        try {
+          const result = await fetchUserListings(userId, 1, 100);
+          if (!cancelled) setItems(result.items);
+        } catch {
+          if (!cancelled) {
+            setItems([]);
+            setError("Профиль загружен, но объявления получить не удалось.");
+          }
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setUser(null);
+          setItems([]);
+          setError(getProfileErrorMessage(requestError));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    };
+    }
 
-    readUser();
-
-    window.addEventListener("storage", readUser);
-    window.addEventListener("dobry-shkaf-user-updated", readUser);
+    loadProfile();
 
     return () => {
-      window.removeEventListener("storage", readUser);
-      window.removeEventListener("dobry-shkaf-user-updated", readUser);
+      cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -191,42 +139,28 @@ export default function PublicUserPage() {
   );
 
   const ads = useMemo(() => {
-    return initialAds.filter((ad) => {
+    return items.filter((item) => {
       const matchesTransfer =
-        transfer.length === 0 || transfer.includes(ad.transfer);
-
-      const matchesCategory =
-        !category || ad.category === category;
-
-      const adSubcategory = subcategoryOptions.find(
-        (option) =>
-          option.value === ad.subcategory ||
-          option.label === ad.subcategory,
-      );
-
+        transfer.length === 0 ||
+        (item.transferType !== "to_organization" &&
+          transfer.includes(item.transferType));
+      const matchesCategory = !category || item.category === category;
       const matchesSubcategory =
         subcategories.length === 0 ||
-        (adSubcategory !== undefined &&
-          subcategories.includes(adSubcategory.value));
-
+        (item.subcategory !== undefined &&
+          subcategories.includes(item.subcategory));
       const matchesCondition =
-        conditions.length === 0 ||
-        conditions.includes(ad.condition);
+        conditions.length === 0 || conditions.includes(item.condition);
 
       return (
+        item.status === "published" &&
         matchesTransfer &&
         matchesCategory &&
         matchesSubcategory &&
         matchesCondition
       );
     });
-  }, [
-    transfer,
-    category,
-    subcategories,
-    conditions,
-    subcategoryOptions,
-  ]);
+  }, [items, transfer, category, subcategories, conditions]);
 
   function toggleValue<T extends string>(
     value: T,
@@ -247,17 +181,17 @@ export default function PublicUserPage() {
     setConditions([]);
   }
 
-  const profileName = user?.name || "Имя Пользователя";
-  const profileCity = user?.city || "Местоположение";
+  const profileName = user?.name || "Пользователь";
+  const profileCity = user?.city || "Город не указан";
 
   return (
     <main className={styles.page}>
       <section className={styles.profile}>
         <div className={styles.userCard}>
-          {user?.photo ? (
+          {user?.avatar_url ? (
             <img
               className={styles.avatar}
-              src={getAvatarUrl(user.photo)}
+              src={getAvatarUrl(user.avatar_url)}
               alt={`Фото пользователя ${profileName}`}
             />
           ) : (
@@ -288,7 +222,7 @@ export default function PublicUserPage() {
 
         <div className={styles.impact}>
           <strong>
-            13<span>ед</span>
+            {user?.items_saved ?? 0}<span>ед</span>
           </strong>
           <span>спасено</span>
         </div>
@@ -432,16 +366,21 @@ export default function PublicUserPage() {
           </span>
         </div>
 
-        <div className={styles.cards}>
+        {loading ? (
+          <div className={styles.emptyState}>Загружаем профиль и объявления...</div>
+        ) : error ? (
+          <div className={styles.emptyState} role="alert">{error}</div>
+        ) : (
+          <div className={styles.cards}>
           {ads.map((ad) => (
             <article
               className={styles.adCard}
               key={ad.id}
             >
               <div className={styles.photoArea}>
-                {ad.photo ? (
+                {ad.coverUrl ? (
                   <img
-                    src={ad.photo}
+                    src={ad.coverUrl}
                     alt={ad.title}
                     className={styles.itemPhoto}
                   />
@@ -470,16 +409,18 @@ export default function PublicUserPage() {
                   title={ad.city}
                 >
                   <img src="/location.svg" alt="" />
-                  {ad.city}
+                  {ad.city || "Город не указан"}
                 </span>
 
                 <div className={styles.tags}>
                   <span className={styles.darkTag}>
-                    {ad.transfer === "exchange" ? "Обмен" : "Бесплатно"}
+                    {ad.transferType === "exchange" ? "Обмен" : "Бесплатно"}
                   </span>
 
                   <span>{categoryLabels[ad.category]}</span>
-                  <span>{ad.subcategory}</span>
+                  {ad.subcategory && (
+                    <span>{subcategoryLabel(ad.category, ad.subcategory)}</span>
+                  )}
                   <span>{conditionLabels[ad.condition]}</span>
                 </div>
               </div>
@@ -488,10 +429,13 @@ export default function PublicUserPage() {
 
           {ads.length === 0 && (
             <div className={styles.emptyState}>
-              По выбранным фильтрам объявлений нет.
+              {items.length === 0
+                ? "У пользователя пока нет опубликованных объявлений."
+                : "По выбранным фильтрам объявлений нет."}
             </div>
           )}
-        </div>
+          </div>
+        )}
       </section>
     </main>
   );
