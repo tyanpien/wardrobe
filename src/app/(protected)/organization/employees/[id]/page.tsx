@@ -45,6 +45,8 @@ export default function EditEmployeePage() {
     useState<OrganizationMemberDto | null>(null);
 
   const [permissions, setPermissions] = useState<string[]>([]);
+  const [editAccessEnabled, setEditAccessEnabled] = useState(false);
+  const [editMode, setEditMode] = useState<"all" | "selected">("selected");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -75,8 +77,24 @@ export default function EditEmployeePage() {
 
       setMember(current);
 
-      setPermissions(
-        current.permissions.filter((value) => value !== "chat"),
+      const loadedPermissions = current.permissions.filter(
+        (value) => value !== "chat",
+      );
+
+      setPermissions(loadedPermissions);
+
+      const hasEditPermission =
+        loadedPermissions.includes("edit_profile") ||
+        EDIT_PERMISSIONS.some((permission) =>
+          loadedPermissions.includes(permission),
+        );
+
+      setEditAccessEnabled(hasEditPermission);
+
+      setEditMode(
+        loadedPermissions.includes("edit_profile")
+          ? "all"
+          : "selected",
       );
     } catch (requestError) {
       setError(
@@ -102,19 +120,79 @@ export default function EditEmployeePage() {
     );
   };
 
+  const handleEditAccessChange = (checked: boolean) => {
+    setEditAccessEnabled(checked);
+
+    if (checked) {
+      setEditMode("all");
+
+      setPermissions((current) => [
+        ...new Set([...current, "edit_profile"]),
+      ]);
+
+      return;
+    }
+
+    setEditMode("selected");
+
+    setPermissions((current) =>
+      current.filter(
+        (item) =>
+          item !== "edit_profile" &&
+          !EDIT_PERMISSIONS.includes(
+            item as (typeof EDIT_PERMISSIONS)[number],
+          ),
+      ),
+    );
+  };
+
+  const handleSelectAllMode = () => {
+    setEditMode("all");
+
+    setPermissions((current) => [
+      ...new Set([...current, "edit_profile"]),
+    ]);
+  };
+
+  const handleSelectBlocksMode = () => {
+    setEditMode("selected");
+
+    setPermissions((current) =>
+      current.filter((item) => item !== "edit_profile"),
+    );
+  };
+
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!organization || !member) return;
 
-    const normalized = permissions.includes("edit_profile")
-      ? permissions.filter(
-          (item) =>
-            !EDIT_PERMISSIONS.includes(
-              item as (typeof EDIT_PERMISSIONS)[number],
-            ),
-        )
-      : permissions;
+    const normalized: OrganizationPermission[] = permissions.filter(
+      (item) =>
+        !EDIT_PERMISSIONS.includes(
+          item as (typeof EDIT_PERMISSIONS)[number],
+        ) && item !== "edit_profile",
+    ) as OrganizationPermission[];
+
+    if (editAccessEnabled && editMode === "all") {
+      normalized.push("edit_profile");
+    } else if (editAccessEnabled && editMode === "selected") {
+
+      if (
+        permissions.includes("edit_general_info") ||
+        permissions.includes("edit_contacts")
+      ) {
+        normalized.push("edit_general_info", "edit_contacts");
+      }
+
+      if (permissions.includes("edit_acceptance_rules")) {
+        normalized.push("edit_acceptance_rules");
+      }
+
+      if (permissions.includes("edit_addresses")) {
+        normalized.push("edit_addresses");
+      }
+    }
 
     setSaving(true);
     setError("");
@@ -123,7 +201,7 @@ export default function EditEmployeePage() {
       await updateOrganizationMemberPermissions(
         organization.id,
         member.id,
-        normalized as OrganizationPermission[],
+        [...new Set(normalized)],
       );
 
       router.push("/organization/employees");
@@ -217,89 +295,167 @@ export default function EditEmployeePage() {
                   <input
                     type="checkbox"
                     className={styles.checkbox}
-                    checked={permissions.includes("edit_profile")}
+                    checked={editAccessEnabled}
                     onChange={(event) =>
-                      setPermissions((current) =>
-                        event.target.checked
-                          ? [
-                              ...current.filter(
-                                (item) =>
-                                  !EDIT_PERMISSIONS.includes(
-                                    item as (typeof EDIT_PERMISSIONS)[number],
-                                  ),
-                              ),
-                              "edit_profile",
-                            ]
-                          : current.filter(
-                              (item) => item !== "edit_profile",
-                            ),
+                      handleEditAccessChange(event.target.checked)
+                    }
+                  />
+
+                  Редактировать информацию организации
+                </label>
+
+                {editAccessEnabled && (
+                  <div className={styles.nestedPermissions}>
+                    <label className={styles.customRadioLabel}>
+                      <input
+                        type="radio"
+                        name="editType"
+                        className={styles.radio}
+                        checked={editMode === "all"}
+                        onChange={handleSelectAllMode}
+                      />
+
+                      Вся страница
+                    </label>
+
+                    <label className={styles.customRadioLabel}>
+                      <input
+                        type="radio"
+                        name="editType"
+                        className={styles.radio}
+                        checked={editMode === "selected"}
+                        onChange={handleSelectBlocksMode}
+                      />
+
+                      Только выбранные блоки
+                    </label>
+
+                    {editMode === "selected" && (
+                      <div className={styles.subBlocks}>
+                        <label className={styles.customCheckboxLabel}>
+                          <input
+                            type="checkbox"
+                            className={styles.checkbox}
+                            checked={
+                              permissions.includes("edit_general_info") ||
+                              permissions.includes("edit_contacts")
+                            }
+                            onChange={(event) =>
+                              setPermissions((current) =>
+                                event.target.checked
+                                  ? [
+                                      ...current.filter(
+                                        (item) =>
+                                          item !== "edit_general_info" &&
+                                          item !== "edit_contacts",
+                                      ),
+                                      "edit_general_info",
+                                      "edit_contacts",
+                                    ]
+                                  : current.filter(
+                                      (item) =>
+                                        item !== "edit_general_info" &&
+                                        item !== "edit_contacts",
+                                    ),
+                              )
+                            }
+                          />
+
+                          Основная информация
+                        </label>
+
+                        <label className={styles.customCheckboxLabel}>
+                          <input
+                            type="checkbox"
+                            className={styles.checkbox}
+                            checked={permissions.includes(
+                              "edit_acceptance_rules",
+                            )}
+                            onChange={(event) =>
+                              toggle(
+                                "edit_acceptance_rules",
+                                event.target.checked,
+                              )
+                            }
+                          />
+
+                          Правила приёма
+                        </label>
+
+                        <label className={styles.customCheckboxLabel}>
+                          <input
+                            type="checkbox"
+                            className={styles.checkbox}
+                            checked={permissions.includes("edit_addresses")}
+                            onChange={(event) =>
+                              toggle(
+                                "edit_addresses",
+                                event.target.checked,
+                              )
+                            }
+                          />
+
+                          Пункты приёма
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <label
+                  className={styles.customCheckboxLabel}
+                  style={{ marginTop: "8px" }}
+                >
+                  <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={permissions.includes(
+                      "manage_volunteer_tasks",
+                    )}
+                    onChange={(event) =>
+                      toggle(
+                        "manage_volunteer_tasks",
+                        event.target.checked,
                       )
                     }
                   />
-                  Редактировать всю страницу организации
+
+                  Создавать и управлять волонтёрскими задачами
                 </label>
 
-                <div className={styles.subBlocks}>
-                  {(
-                    [
-                      ["edit_general_info", "Основная информация"],
-                      ["edit_contacts", "Контактные данные"],
-                      ["edit_acceptance_rules", "Правила приёма"],
-                      ["edit_addresses", "Пункты приёма"],
-                    ] as const
-                  ).map(([permission, label]) => (
-                    <label
-                      className={styles.customCheckboxLabel}
-                      key={permission}
-                    >
-                      <input
-                        type="checkbox"
-                        className={styles.checkbox}
-                        checked={
-                          permissions.includes("edit_profile") ||
-                          permissions.includes(permission)
-                        }
-                        disabled={permissions.includes("edit_profile")}
-                        onChange={(event) =>
-                          toggle(permission, event.target.checked)
-                        }
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-
-                {(
-                  [
-                    [
-                      "manage_volunteer_tasks",
-                      "Создавать и управлять волонтёрскими задачами",
-                    ],
-                    [
+                <label className={styles.customCheckboxLabel}>
+                  <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={permissions.includes(
                       "review_volunteer_responses",
-                      "Рассматривать отклики волонтёров",
-                    ],
-                    [
-                      "confirm_transfers",
-                      "Подтверждать получение вещей",
-                    ],
-                  ] as const
-                ).map(([permission, label]) => (
-                  <label
-                    className={styles.customCheckboxLabel}
-                    key={permission}
-                  >
-                    <input
-                      type="checkbox"
-                      className={styles.checkbox}
-                      checked={permissions.includes(permission)}
-                      onChange={(event) =>
-                        toggle(permission, event.target.checked)
-                      }
-                    />
-                    {label}
-                  </label>
-                ))}
+                    )}
+                    onChange={(event) =>
+                      toggle(
+                        "review_volunteer_responses",
+                        event.target.checked,
+                      )
+                    }
+                  />
+
+                  Рассматривать отклики волонтёров
+                </label>
+
+                <label className={styles.customCheckboxLabel}>
+                  <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={permissions.includes("confirm_transfers")}
+                    onChange={(event) =>
+                      toggle(
+                        "confirm_transfers",
+                        event.target.checked,
+                      )
+                    }
+                  />
+
+                  Подтверждать получение вещей
+                </label>
               </div>
 
               <div className={styles.infoBanner}>

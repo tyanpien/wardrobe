@@ -62,6 +62,7 @@ export default function EmployeesPage() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [copiedInvitationId, setCopiedInvitationId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -130,6 +131,29 @@ export default function EmployeesPage() {
       setActionError(getApiErrorMessage(requestError));
     } finally {
       setRevokingId(null);
+    }
+  };
+
+  const copyInvitationLink = async (
+    invitation: OrganizationInvitationDto,
+  ) => {
+    const invitationUrl =
+      `${window.location.origin}/organization/invitations/${encodeURIComponent(invitation.token)}`;
+  
+    try {
+      await navigator.clipboard.writeText(invitationUrl);
+  
+      setCopiedInvitationId(invitation.id);
+  
+      window.setTimeout(() => {
+        setCopiedInvitationId((current) =>
+          current === invitation.id ? null : current,
+        );
+      }, 2500);
+    } catch {
+      setActionError(
+        "Не удалось скопировать ссылку. Проверьте разрешения браузера.",
+      );
     }
   };
 
@@ -223,34 +247,37 @@ export default function EmployeesPage() {
                 <h2>Ожидают принятия</h2>
 
                 {invitations.map((invitation) => (
-                  <article
-                    className={styles.employeeCard}
-                    key={invitation.id}
-                  >
+                  <article className={styles.employeeCard} key={invitation.id}>
                     <div className={styles.employeeInfo}>
-                      <h2 className={styles.user}>
-                        {invitation.email}
-                      </h2>
+                      <h2 className={styles.user}>{invitation.email}</h2>
 
-                      <p>
-                        Приглашение отправлено · Ожидает принятия
-                      </p>
+                      <p>Приглашение отправлено · Ожидает принятия</p>
 
-                      <p>
-                        {describePermissions(invitation.permissions)}
-                      </p>
+                      <p>{describePermissions(invitation.permissions)}</p>
                     </div>
 
-                    <button
-                      type="button"
-                      className={styles.employeeAction}
-                      disabled={revokingId === invitation.id}
-                      onClick={() => void revokeInvitation(invitation)}
-                    >
-                      {revokingId === invitation.id
-                        ? "Отзываем..."
-                        : "Отозвать"}
-                    </button>
+                    <div className={styles.invitationActions}>
+                      <button
+                        type="button"
+                        className={styles.employeeAction}
+                        onClick={() => void copyInvitationLink(invitation)}
+                      >
+                        {copiedInvitationId === invitation.id
+                          ? "Ссылка скопирована ✓"
+                          : "Скопировать ссылку"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className={styles.employeeAction}
+                        disabled={revokingId === invitation.id}
+                        onClick={() => void revokeInvitation(invitation)}
+                      >
+                        {revokingId === invitation.id
+                          ? "Отзываем..."
+                          : "Отозвать"}
+                      </button>
+                    </div>
                   </article>
                 ))}
 
