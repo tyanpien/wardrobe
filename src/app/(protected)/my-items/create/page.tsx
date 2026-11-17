@@ -34,6 +34,10 @@ type PhotoDraft = {
   name: string;
 };
 
+type FieldName = "title" | "description" | "category" | "city" | "photos";
+
+type FieldErrors = Partial<Record<FieldName, string>>;
+
 const CATEGORIES = CATEGORY_OPTIONS.map((item) => ({
   value: item.value,
   label: item.label,
@@ -51,6 +55,7 @@ const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 export default function CreateItemPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ItemCategory | "">("");
@@ -61,10 +66,29 @@ export default function CreateItemPage() {
   const [delivery, setDelivery] = useState<DeliveryMethod>("meeting");
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [city, setCity] = useState("");
+
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [success, setSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  function clearFieldError(field: FieldName) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
+  function setFieldValueError(field: FieldName, message: string) {
+    setFieldErrors((current) => ({
+      ...current,
+      [field]: message,
+    }));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -78,12 +102,15 @@ export default function CreateItemPage() {
       .catch(() => {
         try {
           const savedUser = localStorage.getItem("dobry-shkaf-user");
+
           if (savedUser) {
             const user = JSON.parse(savedUser) as { city?: string };
-            if (!cancelled && user.city) setCity(user.city);
+
+            if (!cancelled && user.city) {
+              setCity(user.city);
+            }
           }
         } catch {
-          
         }
       });
 
@@ -94,13 +121,15 @@ export default function CreateItemPage() {
 
   useEffect(() => {
     return () => {
-      photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+      photos.forEach((photo) => {
+        URL.revokeObjectURL(photo.previewUrl);
+      });
     };
   }, [photos]);
 
   async function readFiles(fileList: FileList | null) {
     if (!fileList) return;
-    setError("");
+
     const selected = Array.from(fileList);
 
     if (photos.length + selected.length > 5) {
@@ -109,14 +138,19 @@ export default function CreateItemPage() {
     }
 
     const invalid = selected.find(
-      (file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type),
+      (file) =>
+        !["image/jpeg", "image/png", "image/webp"].includes(file.type),
     );
+
     if (invalid) {
       setError("Поддерживаются только JPG, PNG и WEBP.");
       return;
     }
 
-    const tooLarge = selected.find((file) => file.size > MAX_PHOTO_SIZE);
+    const tooLarge = selected.find(
+      (file) => file.size > MAX_PHOTO_SIZE,
+    );
+
     if (tooLarge) {
       setError(`Файл «${tooLarge.name}» больше 5 МБ.`);
       return;
@@ -126,6 +160,7 @@ export default function CreateItemPage() {
       const prepared = await Promise.all(
         selected.map(async (file) => {
           const jpegFile = await prepareListingPhoto(file);
+
           return {
             previewUrl: URL.createObjectURL(jpegFile),
             file: jpegFile,
@@ -133,9 +168,20 @@ export default function CreateItemPage() {
           } satisfies PhotoDraft;
         }),
       );
+
       setPhotos((current) => [...current, ...prepared].slice(0, 5));
+
+      setFieldErrors((current) => {
+        const next = { ...current };
+        delete next.photos;
+        return next;
+      });
+
+      setError("");
     } catch {
-      setError("Не удалось загрузить фотографии. Попробуйте выбрать их ещё раз.");
+      setError(
+        "Не удалось загрузить фотографии. Попробуйте выбрать их ещё раз.",
+      );
     }
   }
 
@@ -151,55 +197,80 @@ export default function CreateItemPage() {
 
   function removePhoto(index: number) {
     setPhotos((current) => {
-      const next = current.filter((_, photoIndex) => photoIndex !== index);
+      const next = current.filter(
+        (_, photoIndex) => photoIndex !== index,
+      );
+
       URL.revokeObjectURL(current[index]?.previewUrl || "");
+
+      if (next.length === 0) {
+        setFieldValueError("photos", "Добавьте хотя бы одну фотографию.");
+      }
+
       return next;
     });
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
+  function validateForm(): boolean {
+    const errors: FieldErrors = {};
+
+    if (!title.trim()) {
+      errors.title = "Введите название объявления.";
+    }
+
+    if (!description.trim()) {
+      errors.description = "Введите описание объявления.";
+    }
 
     if (!category) {
-      setError("Выберите категорию.");
-      return;
-    }
-
-    if (category !== "other" && !subcategory) {
-      setError("Выберите подкатегорию.");
-      return;
-    }
-
-    if (photos.length === 0) {
-      setError("Добавьте хотя бы одну фотографию.");
-      return;
-    }
-
-    if (transfer === "exchange" && !exchangeWishes.trim()) {
-      setError("Укажите, на что хотите обменять вещь.");
-      return;
+      errors.category = "Выберите категорию.";
     }
 
     if (!city.trim()) {
-      setError(
-        "Укажите город в профиле — он подставляется в объявление автоматически.",
-      );
+      errors.city =
+        "Укажите город в профиле. Он необходим для публикации объявления.";
+    }
+
+    if (photos.length === 0) {
+      errors.photos = "Добавьте хотя бы одну фотографию.";
+    }
+
+    setFieldErrors(errors);
+
+    return Object.keys(errors).length === 0;
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setError("");
+
+    if (!validateForm()) {
       return;
     }
 
     setSubmitting(true);
 
+    if (!category) {
+      setError("Выберите категорию");
+      return;
+    }
+
     try {
       const created = await createListing({
         title: title.trim(),
         description: description.trim(),
-        category,
-        subcategory: category === "other" ? undefined : subcategory,
+        category: category,
+        subcategory:
+          category === "other" || !subcategory
+            ? undefined
+            : subcategory,
         condition,
         transferType: transfer,
         exchangeWishes:
-          transfer === "exchange" ? exchangeWishes.trim() : undefined,
+          transfer === "exchange" && exchangeWishes.trim()
+            ? exchangeWishes.trim()
+            : undefined,
         deliveryMethod: delivery,
         photos: photos.map((photo) => photo.file),
       });
@@ -217,9 +288,16 @@ export default function CreateItemPage() {
     return (
       <main className={styles.page}>
         <div className={styles.successPanel}>
-          <div className={styles.successIcon}><img src='/success.svg'/></div>
+          <div className={styles.successIcon}>
+            <img src="/success.svg" alt="" />
+          </div>
+
           <h1>Объявление опубликовано</h1>
-          <p>Оно уже доступно в каталоге и в разделе «Мои объявления».</p>
+
+          <p>
+            Оно уже доступно в каталоге и в разделе «Мои объявления».
+          </p>
+
           <div className={styles.successActions}>
             <button
               type="button"
@@ -228,7 +306,8 @@ export default function CreateItemPage() {
             >
               Мои объявления
             </button>
-            {createdId ? (
+
+            {createdId && (
               <button
                 type="button"
                 onClick={() => router.push(`/catalog/${createdId}`)}
@@ -236,7 +315,8 @@ export default function CreateItemPage() {
               >
                 Открыть объявление
               </button>
-            ) : null}
+            )}
+
             <button
               type="button"
               onClick={() => {
@@ -251,6 +331,8 @@ export default function CreateItemPage() {
                 setExchangeWishes("");
                 setDelivery("meeting");
                 setPhotos([]);
+                setFieldErrors({});
+                setError("");
               }}
               className={styles.backToForm}
             >
@@ -272,52 +354,104 @@ export default function CreateItemPage() {
   return (
     <main className={styles.page}>
       <div className={styles.pageHeading}>
-        <Link href="/profile" className={styles.backButton} aria-label="Назад">
+        <Link
+          href="/profile"
+          className={styles.backButton}
+          aria-label="Назад"
+        >
           <img src="/eva_arrow-back-fill.svg" alt="Назад" />
         </Link>
         <h1>Создать объявление</h1>
       </div>
 
-      <form className={styles.form} onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        className={styles.form}
+        onSubmit={(event) => void handleSubmit(event)}
+        noValidate
+      >
         <div className={styles.column}>
-          <label className={styles.field}>
+          <label
+            className={`${styles.field} ${
+              fieldErrors.title ? styles.fieldInvalid : ""
+            }`}
+          >
             <span>Название</span>
+
             <input
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                clearFieldError("title");
+              }}
               placeholder="Например, зимняя куртка"
               maxLength={80}
-              required
+              aria-invalid={Boolean(fieldErrors.title)}
             />
+
+            {fieldErrors.title && (
+              <span className={styles.fieldError} role="alert">
+                {fieldErrors.title}
+              </span>
+            )}
           </label>
 
-          <label className={`${styles.field} ${styles.descriptionField}`}>
+          <label
+            className={`${styles.field} ${styles.descriptionField} ${
+              fieldErrors.description ? styles.fieldInvalid : ""
+            }`}
+          >
             <span>Описание</span>
             <textarea
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => {
+                setDescription(event.target.value);
+                clearFieldError("description");
+              }}
               placeholder="Опишите вещь, её состояние и особенности"
               maxLength={1500}
-              required
+              aria-invalid={Boolean(fieldErrors.description)}
             />
+            {fieldErrors.description && (
+              <span className={styles.fieldError} role="alert">
+                {fieldErrors.description}
+              </span>
+            )}
           </label>
 
-          <label className={styles.field}>
+          <div
+            className={`${styles.field} ${
+              fieldErrors.category ? styles.fieldInvalid : ""
+            }`}
+          >
             <span>Категория</span>
-            <CategorySelect
-              value={category}
-              options={CATEGORIES}
-              placeholder="Выберите категорию"
-              onChange={(value) => {
-                setCategory(value);
-                setSubcategory("");
-              }}
-            />
-          </label>
+
+            <div
+              className={
+                fieldErrors.category ? styles.categoryInvalid : ""
+              }
+            >
+              <CategorySelect
+                value={category}
+                options={CATEGORIES}
+                placeholder="Выберите категорию"
+                onChange={(value) => {
+                  setCategory(value);
+                  setSubcategory("");
+                  clearFieldError("category");
+                }}
+              />
+            </div>
+
+            {fieldErrors.category && (
+              <span className={styles.fieldError} role="alert">
+                {fieldErrors.category}
+              </span>
+            )}
+          </div>
 
           {category !== "other" && (
             <label className={styles.field}>
-              <span>Подкатегория</span>
+              <span>Подкатегория (необязательно)</span>
               <CategorySelect
                 value={subcategory}
                 options={subcategoryOptions}
@@ -377,12 +511,12 @@ export default function CreateItemPage() {
 
           {transfer === "exchange" && (
             <label className={styles.field}>
-              <span>Пожелания по обмену</span>
+              <span>Пожелания по обмену (необязательно)</span>
+
               <input
                 value={exchangeWishes}
                 onChange={(event) => setExchangeWishes(event.target.value)}
                 placeholder="На что хотите обменять"
-                required
               />
             </label>
           )}
@@ -420,25 +554,40 @@ export default function CreateItemPage() {
             </div>
           </fieldset>
 
-          <label className={styles.field}>
+          <label
+            className={`${styles.field} ${
+              fieldErrors.city ? styles.fieldInvalid : ""
+            }`}
+          >
             <span>Город</span>
             <input
               value={city}
               readOnly
               placeholder="Укажите город в профиле"
               maxLength={100}
-              required
+              aria-invalid={Boolean(fieldErrors.city)}
             />
             <small>
               Город берётся из профиля.{" "}
               <Link href="/profile/edit">Изменить</Link>
             </small>
+            {fieldErrors.city && (
+              <span className={styles.fieldError} role="alert">
+                {fieldErrors.city}
+              </span>
+            )}
           </label>
 
-          <div className={styles.field}>
+          <div
+            className={`${styles.field} ${
+              fieldErrors.photos ? styles.fieldInvalid : ""
+            }`}
+          >
             <span>Фото</span>
             <div
-              className={styles.dropZone}
+              className={`${styles.dropZone} ${
+                fieldErrors.photos ? styles.dropZoneInvalid : ""
+              }`}
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDrop}
             >
@@ -467,8 +616,15 @@ export default function CreateItemPage() {
             {photos.length > 0 && (
               <div className={styles.photoGrid}>
                 {photos.map((photo, index) => (
-                  <div className={styles.photoPreview} key={`${photo.name}-${index}`}>
-                    <img src={photo.previewUrl} alt={photo.name || `Фото ${index + 1}`} />
+                  <div
+                    className={styles.photoPreview}
+                    key={`${photo.name}-${index}`}
+                  >
+                    <img
+                      src={photo.previewUrl}
+                      alt={photo.name || `Фото ${index + 1}`}
+                    />
+
                     <button
                       type="button"
                       onClick={() => removePhoto(index)}
@@ -480,6 +636,12 @@ export default function CreateItemPage() {
                   </div>
                 ))}
               </div>
+            )}
+
+            {fieldErrors.photos && (
+              <span className={styles.fieldError} role="alert">
+                {fieldErrors.photos}
+              </span>
             )}
           </div>
 

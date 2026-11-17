@@ -22,6 +22,10 @@ import type { CategoriesResponse } from "@/entities/item/api/listings";
 import styles from "./page.module.css";
 import { CitySelect } from "@/shared/ui/CitySelect/CitySelect";
 import { getCities } from "@/entities/user/api/profile";
+import {
+  parseOrganizationRuleItems,
+  normalizeOrganizationRuleText,
+} from "@/shared/lib/organization-rules";
 
 type OrganizationInfo = {
   name: string;
@@ -166,8 +170,13 @@ function mapOrganizationDto(dto: OrganizationDetailDto): OrganizationStorage {
     },
     rules,
     conditions: dto.acceptance_rules.conditions ?? [],
-    requirements: dto.acceptance_rules.additional_requirements ?? "",
-    exclusions: (dto.acceptance_rules.not_accepted ?? []).join("\n"),
+    requirements: parseOrganizationRuleItems(
+      dto.acceptance_rules.additional_requirements
+    ).join("\n"),
+    
+    exclusions: parseOrganizationRuleItems(
+      dto.acceptance_rules.not_accepted
+    ).join("\n"),
     points: dto.addresses.map((address) => {
       const rawSchedule = (address.schedule ?? {}) as Record<string, ApiScheduleDay>;
       return {
@@ -220,11 +229,14 @@ function createEmptyPoint(): ReceptionPoint {
 
 const formatPhone = (value: string) => {
   let digits = value.replace(/\D/g, "");
+
+  if (!digits) return "";
+
   if (digits.startsWith("8")) digits = "7" + digits.slice(1);
   if (!digits.startsWith("7")) digits = "7" + digits;
 
-  let res = "+7 ";
-  if (digits.length > 1) res += `(${digits.slice(1, 4)}`;
+  let res = "+7";
+  if (digits.length > 1) res += ` (${digits.slice(1, 4)}`;
   if (digits.length >= 5) res += `) ${digits.slice(4, 7)}`;
   if (digits.length >= 8) res += `-${digits.slice(7, 9)}`;
   if (digits.length >= 10) res += `-${digits.slice(9, 11)}`;
@@ -370,7 +382,10 @@ export default function OrganizationPage() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isEmailValid = !canEditContacts || emailRegex.test(draftInfo.email.trim());
     const phoneDigits = draftInfo.phone.replace(/\D/g, "");
-    const isPhoneValid = !canEditContacts || phoneDigits.length === 11 && phoneDigits.startsWith("7");
+    const isPhoneValid =
+      !canEditContacts ||
+      phoneDigits.length === 0 ||
+      (phoneDigits.length === 11 && phoneDigits.startsWith("7"));
 
     if (!isEmailValid || !isPhoneValid) {
       setInfoErrors({
@@ -395,7 +410,7 @@ export default function OrganizationPage() {
       }
       if (canEditContacts) {
         await updateOrganizationContacts(organizationId, {
-          phone: draftInfo.phone.trim(),
+          phone: draftInfo.phone.trim() || null,
           email: draftInfo.email.trim(),
         });
       }
@@ -431,8 +446,11 @@ export default function OrganizationPage() {
       await updateOrganizationAcceptanceRules(organizationId, {
         categories: categoriesPayload,
         conditions: draftConditions,
-        additional_requirements: draftRequirements.trim() || null,
-        not_accepted: draftExclusions.split(/\n|;/).map((item) => item.trim()).filter(Boolean),
+
+        additional_requirements:
+          normalizeOrganizationRuleText(draftRequirements) || null,
+        
+        not_accepted: parseOrganizationRuleItems(draftExclusions),
       });
       const dto = await getOrganizationDto(organizationId);
       setData(mapOrganizationDto(dto));
@@ -605,6 +623,15 @@ export default function OrganizationPage() {
   };
 
   const backToOverview = () => setView("overview");
+
+  const getSymbolsWord = (count: number): string => {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+
+    if (mod10 === 1 && mod100 !== 11) return 'символ';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'символа';
+    return 'символов';
+  };
 
   return (
     <main className={styles.page}>
@@ -926,10 +953,19 @@ export default function OrganizationPage() {
                   className={styles.ruleTextarea}
                   disabled={!canEditRules}
                   rows={2}
+                  maxLength={100}
                   value={draftRequirements}
-                  onChange={(event) => setDraftRequirements(event.target.value)}
+                  onChange={(event) =>
+                    setDraftRequirements(event.target.value.slice(0, 100))
+                  }
                   placeholder="Укажите дополнительные требования"
                 />
+                <div className={styles.characterCounter}>
+                  {(() => {
+                    const remaining = 100 - draftRequirements.length;
+                    return `Осталось ${remaining} ${getSymbolsWord(remaining)}`;
+                  })()}
+                </div>
               </section>
 
               <section className={styles.ruleSection}>
@@ -940,10 +976,19 @@ export default function OrganizationPage() {
                     className={styles.ruleTextarea}
                     disabled={!canEditRules}
                     rows={2}
+                    maxLength={100}
                     value={draftExclusions}
-                    onChange={(event) => setDraftExclusions(event.target.value)}
+                    onChange={(event) =>
+                      setDraftExclusions(event.target.value.slice(0, 100))
+                    }
                     placeholder="Опишите исключения, если они есть"
                   />
+                  <div className={styles.characterCounter}>
+                    {(() => {
+                      const remaining = 100 - draftExclusions.length;
+                      return `Осталось ${remaining} ${getSymbolsWord(remaining)}`;
+                    })()}
+                  </div>
                 </label>
               </section>
 

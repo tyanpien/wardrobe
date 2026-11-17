@@ -22,6 +22,7 @@ import styles from "./AuthForm.module.css";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const from = searchParams.get("from") || "/";
 
   const [email, setEmail] = useState("");
@@ -34,7 +35,11 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
-    router.push(from);
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -103,6 +108,7 @@ export function LoginForm() {
           <form className={styles.form} onSubmit={handleSubmit}>
             <div className={styles.field}>
               <label htmlFor="login-email">E-mail</label>
+
               <input
                 id="login-email"
                 type="email"
@@ -116,8 +122,11 @@ export function LoginForm() {
                 autoComplete="email"
                 className={emailError ? styles.inputError : ""}
               />
+
               {emailError && (
-                <span className={styles.error}>{emailError}</span>
+                <span className={styles.error}>
+                  {emailError}
+                </span>
               )}
             </div>
 
@@ -142,13 +151,21 @@ export function LoginForm() {
                 <button
                   type="button"
                   className={styles.eyeButton}
-                  onClick={() => setShowPassword((previous) => !previous)}
+                  onClick={() =>
+                    setShowPassword((previous) => !previous)
+                  }
                   aria-label={
-                    showPassword ? "Скрыть пароль" : "Показать пароль"
+                    showPassword
+                      ? "Скрыть пароль"
+                      : "Показать пароль"
                   }
                 >
                   <Image
-                    src={showPassword ? "/eye-close.svg" : "/eye.svg"}
+                    src={
+                      showPassword
+                        ? "/eye-close.svg"
+                        : "/eye.svg"
+                    }
                     alt=""
                     width={20}
                     height={20}
@@ -157,7 +174,9 @@ export function LoginForm() {
               </div>
 
               {passwordError && (
-                <span className={styles.error}>{passwordError}</span>
+                <span className={styles.error}>
+                  {passwordError}
+                </span>
               )}
             </div>
 
@@ -165,7 +184,9 @@ export function LoginForm() {
               type="button"
               className={styles.forgotPassword}
               onClick={() => {
-                setFormError("Восстановление пароля пока не подключено.");
+                setFormError(
+                  "Восстановление пароля пока не подключено."
+                );
               }}
             >
               Забыли пароль?
@@ -182,7 +203,9 @@ export function LoginForm() {
               className={styles.submitButton}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Выполняем вход..." : "Войти"}
+              {isSubmitting
+                ? "Выполняем вход..."
+                : "Войти"}
             </button>
           </form>
 

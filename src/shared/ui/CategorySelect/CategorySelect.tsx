@@ -7,6 +7,7 @@ type CategorySelectProps<T extends string> = {
   value: T | "";
   options: { value: T; label: string }[];
   placeholder?: string;
+  invalid?: boolean;
   onChange: (value: T | "") => void;
 };
 
@@ -14,12 +15,15 @@ export function CategorySelect<T extends string>({
   value,
   options,
   placeholder = "Все категории",
+  invalid = false,
   onChange,
 }: CategorySelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  );
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -55,28 +59,39 @@ export function CategorySelect<T extends string>({
     <div className={styles.root} ref={rootRef}>
       <button
         type="button"
-        className={`${styles.trigger} ${isOpen ? styles.open : ""}`}
+        className={`${styles.trigger} ${
+          isOpen ? styles.open : ""
+        } ${invalid ? styles.invalid : ""}`}
         onClick={() => setIsOpen((open) => !open)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-invalid={invalid}
       >
         <span className={!value ? styles.placeholder : ""}>
           {selectedOption?.label ?? placeholder}
         </span>
 
         <span
-          className={`${styles.arrow} ${isOpen ? styles.arrowOpen : ""}`}
+          className={`${styles.arrow} ${
+            isOpen ? styles.arrowOpen : ""
+          } ${invalid ? styles.arrowInvalid : ""}`}
         />
       </button>
 
       {isOpen && (
         <div className={styles.dropdown}>
-          <div className={styles.options} role="listbox" aria-label="Категории">
+          <div
+            className={styles.options}
+            role="listbox"
+            aria-label="Категории"
+          >
             <button
               type="button"
               role="option"
               aria-selected={!value}
-              className={`${styles.option} ${!value ? styles.selected : ""}`}
+              className={`${styles.option} ${
+                !value ? styles.selected : ""
+              }`}
               onClick={() => selectOption("")}
             >
               {placeholder}

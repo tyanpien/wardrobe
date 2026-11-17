@@ -56,7 +56,6 @@
   font-weight: 400;
 }
 
-
 .field input:not([type="file"]),
 .field select,
 .field textarea {
@@ -75,7 +74,7 @@
   font-size: 14px;
   font-weight: 400;
 }
-  
+
 .field input::placeholder,
 .field textarea::placeholder {
   color: #96958f;
@@ -97,7 +96,6 @@
   background-position: right 16px center;
   cursor: pointer;
 }
-
 
 .field select:disabled {
   color: #96958f;
@@ -163,6 +161,44 @@
 .radioLabel input:checked {
   border: 3.8px solid #202020;
   background: #d5ee9c;
+}
+
+.fieldInvalid input:not([type="file"]),
+.fieldInvalid textarea {
+  border-bottom: 2px solid #d93025 !important;
+}
+
+.fieldInvalid .categoryInvalid {
+  border-bottom: 2px solid #d93025 !important;
+  border-radius: 8px;
+}
+
+.categoryInvalid {
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.fieldError {
+  display: block;
+  margin: -6px 0 0 14px;
+  color: #d93025 !important;
+  font-size: 13px !important;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.dropZoneInvalid {
+  border: 2px dashed #d93025;
+  background: #fffafa;
+}
+
+.dropZoneInvalid .addPhotoButton {
+  border: 1px solid #d93025;
+}
+
+.fieldInvalid input:focus,
+.fieldInvalid textarea:focus {
+  border-bottom: 2px solid #d93025 !important;
 }
 
 .dropZone {
@@ -335,6 +371,31 @@
   color: #202020;
   font-size: 16px;
   cursor: pointer;
+}
+
+.fieldInvalid input:not([type="file"]),
+.fieldInvalid textarea {
+  border-color: #c62828 !important;
+}
+
+.fieldInvalid > div > button {
+  border-bottom: 1px solid #c62828;
+}
+
+.fieldInvalid > span {
+  color: #a33131;
+}
+
+.fieldError {
+  display: block;
+  margin: -6px 0 0 14px;
+  color: #c62828;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.dropZoneInvalid {
+  border-color: #c62828;
 }
 
 @media (max-width: 760px) {

@@ -32,6 +32,10 @@
   outline: none;
 }
 
+.trigger.invalid {
+  border-bottom: 2px solid #d93030;
+}
+
 .placeholder {
   color: #555;
 }
@@ -48,6 +52,10 @@
 
 .arrowOpen {
   transform: translateY(2px) rotate(225deg);
+}
+
+.arrowInvalid {
+  border-color: #d93030;
 }
 
 .dropdown {

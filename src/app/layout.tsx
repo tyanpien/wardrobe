@@ -39,7 +39,11 @@ export default function RootLayout({
     <html lang="ru">
       <body className={`${roboto.className} ${jura.variable} ${inter.variable}`}>
         <Header />
-        {children}
+
+        <div className="page-content">
+          {children}
+        </div>
+
         <Footer />
 
         <Script

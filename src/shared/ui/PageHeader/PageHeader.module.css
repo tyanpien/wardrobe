@@ -1,4 +1,6 @@
 .header {
+  width: min(1340px, calc(100% - 64px));
+  margin: 50px auto 90px;
   display: flex;
   flex-direction: column;
   gap: 8px;

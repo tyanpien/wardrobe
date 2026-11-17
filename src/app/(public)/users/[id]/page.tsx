@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-
+import { capitalizeFirstLetter } from "@/shared/lib/capitalizeFirstLetter";
 import styles from "./page.module.css";
 
 import {
@@ -373,7 +373,8 @@ export default function PublicUserPage() {
         ) : (
           <div className={styles.cards}>
           {ads.map((ad) => (
-            <article
+            <Link
+              href={`/catalog/${ad.id}`}
               className={styles.adCard}
               key={ad.id}
             >
@@ -398,10 +399,10 @@ export default function PublicUserPage() {
               </div>
 
               <div className={styles.cardBody}>
-                <h3>{ad.title}</h3>
+                <h3>{capitalizeFirstLetter(ad.title)}</h3>
 
                 <p className={styles.description}>
-                  {ad.description}
+                  {capitalizeFirstLetter(ad.description)}
                 </p>
 
                 <span
@@ -424,7 +425,7 @@ export default function PublicUserPage() {
                   <span>{conditionLabels[ad.condition]}</span>
                 </div>
               </div>
-            </article>
+            </Link>
           ))}
 
           {ads.length === 0 && (

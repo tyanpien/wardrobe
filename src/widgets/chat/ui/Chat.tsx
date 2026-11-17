@@ -1,7 +1,13 @@
-
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   confirmChatTransfer,
@@ -12,30 +18,144 @@ import {
   postChatMessage,
   startChatTransfer,
 } from "@/entities/chat";
-import type { ChatDetail, ChatListItem, ChatMessage, Transfer } from "@/entities/chat";
+import type {
+  ChatDetail,
+  ChatListItem,
+  ChatMessage,
+  Transfer,
+} from "@/entities/chat";
 import { getApiErrorMessage } from "@/shared/api/errors";
 import { StartTransferModal } from "@/features/start-transfer";
 import { ConfirmTransferActions } from "@/features/confirm-transfer";
 import styles from "./Chat.module.css";
+import { capitalizeFirstLetter } from "@/shared/lib/capitalizeFirstLetter";
 
-type SavedUser = { id?: string; name?: string; email?: string };
+type SavedUser = {
+  id?: string;
+  name?: string;
+  email?: string;
+};
+
+function declineNameToDative(fullName?: string | null): string {
+  if (!fullName) return "пользователю";
+
+  const name = fullName.trim();
+  if (!name) return "пользователю";
+
+  const parts = name.split(/\s+/);
+  const firstName = parts[0];
+
+  if (!firstName) return "пользователю";
+
+  const lowerName = firstName.toLowerCase();
+
+  const masculineA = [
+    "никита",
+    "илья",
+    "кузьма",
+    "фома",
+    "лука",
+    "савва",
+    "мика",
+  ];
+
+  const masculineYa = [
+    "илья",
+    "коля",
+    "вася",
+    "саша",
+    "петя",
+    "ваня",
+    "валя",
+    "женя",
+    "гена",
+    "миша",
+    "дима",
+    "лёша",
+    "леша",
+    "толя",
+    "боря",
+    "витя",
+    "федя",
+    "фёдор",
+  ];
+
+  let declined = firstName;
+
+  if (masculineA.includes(lowerName)) {
+    declined = `${firstName.slice(0, -1)}е`;
+  } else if (masculineYa.includes(lowerName)) {
+    declined = `${firstName.slice(0, -1)}е`;
+  } else if (lowerName.endsWith("ия")) {
+    declined = `${firstName.slice(0, -1)}и`;
+  } else if (lowerName.endsWith("ья")) {
+    declined = `${firstName.slice(0, -1)}е`;
+  } else if (lowerName.endsWith("а")) {
+    declined = `${firstName.slice(0, -1)}е`;
+  } else if (lowerName.endsWith("я")) {
+    declined = `${firstName.slice(0, -1)}е`;
+  } else if (lowerName.endsWith("й")) {
+    declined = `${firstName.slice(0, -1)}ю`;
+  } else if (lowerName.endsWith("ь")) {
+    declined = `${firstName.slice(0, -1)}ю`;
+  } else if (/[бвгджзклмнпрстфхцчшщ]$/i.test(lowerName)) {
+    declined = `${firstName}у`;
+  }
+
+  return [declined, ...parts.slice(1)].join(" ");
+}
 
 function timeLabel(value?: string | null) {
   if (!value) return "";
+
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+
+  return date.toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function dateLabel(value: string) {
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+
+  return date.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+  });
+}
+
+function sortMessagesAsc(messages: ChatMessage[]): ChatMessage[] {
+  return [...messages].sort((a, b) => {
+    const ta = new Date(a.createdAt).getTime();
+    const tb = new Date(b.createdAt).getTime();
+
+    return ta - tb;
+  });
+}
+
+function sortDialogsDesc(dialogs: ChatListItem[]): ChatListItem[] {
+  return [...dialogs].sort((a, b) => {
+    const ta = a.lastMessage?.created_at
+      ? new Date(a.lastMessage.created_at).getTime()
+      : 0;
+
+    const tb = b.lastMessage?.created_at
+      ? new Date(b.lastMessage.created_at).getTime()
+      : 0;
+
+    return tb - ta;
+  });
 }
 
 export function Chat() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const requestedChatId = searchParams.get("chat") || "";
   const requestedListingId = searchParams.get("item") || "";
   const requestedUserId = searchParams.get("user") || "";
@@ -58,9 +178,14 @@ export function Chat() {
   const dialogsOrderRef = useRef<string[]>([]);
 
   const updateDialogs = useCallback((list: ChatListItem[]) => {
-    const dialogsMap = new Map(list.map((dialog) => [dialog.id, dialog]));
+    const dialogsMap = new Map(
+      list.map((dialog) => [dialog.id, dialog])
+    );
 
-    const order = dialogsOrderRef.current.filter((id) => dialogsMap.has(id));
+    const order = dialogsOrderRef.current.filter((id) =>
+      dialogsMap.has(id)
+    );
+
     const knownIds = new Set(order);
 
     for (const dialog of list) {
@@ -71,7 +196,12 @@ export function Chat() {
     }
 
     dialogsOrderRef.current = order;
-    setDialogs(order.map((id) => dialogsMap.get(id)!));
+
+    setDialogs(
+      sortDialogsDesc(
+        order.map((id) => dialogsMap.get(id)!)
+      )
+    );
   }, []);
 
   const applyChat = useCallback((chat: ChatDetail) => {
@@ -81,7 +211,9 @@ export function Chat() {
 
   const refreshDialogs = useCallback(async () => {
     const list = await fetchMyChats();
+
     updateDialogs(list);
+
     return list;
   }, [updateDialogs]);
 
@@ -94,37 +226,56 @@ export function Chat() {
 
       try {
         const raw = localStorage.getItem("dobry-shkaf-user");
-        const user = raw ? (JSON.parse(raw) as SavedUser) : null;
+        const user = raw
+          ? (JSON.parse(raw) as SavedUser)
+          : null;
 
         if (!user?.id) {
-          throw new Error("Не удалось определить пользователя. Войдите в аккаунт заново.");
+          throw new Error(
+            "Не удалось определить пользователя. Войдите в аккаунт заново."
+          );
         }
 
-        if (!cancelled) setCurrentUserId(user.id);
+        if (!cancelled) {
+          setCurrentUserId(user.id);
+        }
 
         if (requestedListingId && !requestedChatId) {
           const opened = await openListingChat(requestedListingId);
+
           if (cancelled) return;
 
-          router.replace(`/messages?chat=${encodeURIComponent(opened.id)}`);
+          router.replace(
+            `/messages?chat=${encodeURIComponent(opened.id)}`
+          );
+
           applyChat(opened);
 
           const nextMessages = await fetchChatMessages(opened.id);
-          if (!cancelled) setMessages(nextMessages);
+
+          if (!cancelled) {
+            setMessages(sortMessagesAsc(nextMessages));
+          }
 
           const list = await fetchMyChats();
-          if (!cancelled) updateDialogs(list);
+
+          if (!cancelled) {
+            updateDialogs(list);
+          }
 
           return;
         }
 
         const list = await fetchMyChats();
+
         if (cancelled) return;
 
         updateDialogs(list);
 
         const matchingUserChat = requestedUserId
-          ? list.find((item) => item.otherUser.id === requestedUserId)
+          ? list.find(
+              (item) => item.otherUser.id === requestedUserId
+            )
           : undefined;
 
         const chatId =
@@ -132,9 +283,13 @@ export function Chat() {
           matchingUserChat?.id ||
           (!requestedUserId ? list[0]?.id || "" : "");
 
-        if (requestedUserId && !matchingUserChat && !requestedChatId) {
+        if (
+          requestedUserId &&
+          !matchingUserChat &&
+          !requestedChatId
+        ) {
           setError(
-            "Чтобы начать новую переписку, откройте конкретное объявление этого пользователя и нажмите «Написать». "
+            "Чтобы начать новую переписку, откройте конкретное объявление этого пользователя и нажмите «Написать»."
           );
         }
 
@@ -149,18 +304,28 @@ export function Chat() {
           if (cancelled) return;
 
           applyChat(chat);
-          setMessages(nextMessages);
+
+          setMessages(sortMessagesAsc(nextMessages));
 
           if (!requestedChatId) {
-            router.replace(`/messages?chat=${encodeURIComponent(chatId)}`);
+            router.replace(
+              `/messages?chat=${encodeURIComponent(chatId)}`
+            );
           }
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(getApiErrorMessage(loadError, "Не удалось загрузить диалоги."));
+          setError(
+            getApiErrorMessage(
+              loadError,
+              "Не удалось загрузить диалоги."
+            )
+          );
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -186,7 +351,13 @@ export function Chat() {
     let busy = false;
 
     const poll = async () => {
-      if (busy || stopped || document.visibilityState === "hidden") return;
+      if (
+        busy ||
+        stopped ||
+        document.visibilityState === "hidden"
+      ) {
+        return;
+      }
 
       busy = true;
 
@@ -197,16 +368,26 @@ export function Chat() {
           fetchMyChats(),
         ]);
 
-        if (stopped || activeChatIdRef.current !== chatId) return;
+        if (
+          stopped ||
+          activeChatIdRef.current !== chatId
+        ) {
+          return;
+        }
 
         setActiveChat(chat);
 
         setMessages((previous) => {
-          const same =
-            previous.length === nextMessages.length &&
-            previous.every((m, i) => m.id === nextMessages[i]?.id);
+          const sorted = sortMessagesAsc(nextMessages);
 
-          return same ? previous : nextMessages;
+          const same =
+            previous.length === sorted.length &&
+            previous.every(
+              (message, index) =>
+                message.id === sorted[index]?.id
+            );
+
+          return same ? previous : sorted;
         });
 
         updateDialogs(list);
@@ -241,12 +422,39 @@ export function Chat() {
       : activeChat.owner;
   }, [activeChat, currentUserId]);
 
-  const isOwner = Boolean(activeChat && activeChat.ownerId === currentUserId);
+  const isOwner = Boolean(
+    activeChat && activeChat.ownerId === currentUserId
+  );
 
   const listingStatus =
     activeChat?.transfer?.listingStatus ||
     activeChat?.listing.status ||
     "published";
+
+  const transferStatusMessageIndex = messages.reduce(
+    (lastIndex, message, index) => {
+      const text = message.text.toLowerCase();
+
+      const isTransferStatus =
+        message.type === "system" &&
+        (
+          text.includes("передач") ||
+          text.includes("получен")
+        );
+
+      return isTransferStatus ? index : lastIndex;
+    },
+    -1
+  );
+
+  const headerStatus =
+    activeChat?.transfer?.status === "completed" ||
+    listingStatus === "transferred"
+      ? "Передано"
+      : activeChat?.transfer ||
+          listingStatus === "in_transfer"
+        ? "В процессе передачи"
+        : "";
 
   async function selectChat(chatId: string) {
     if (chatId === activeChat?.id) return;
@@ -255,7 +463,9 @@ export function Chat() {
     setError("");
     activeChatIdRef.current = chatId;
 
-    router.push(`/messages?chat=${encodeURIComponent(chatId)}`);
+    router.push(
+      `/messages?chat=${encodeURIComponent(chatId)}`
+    );
 
     try {
       const [chat, nextMessages] = await Promise.all([
@@ -266,15 +476,25 @@ export function Chat() {
       if (activeChatIdRef.current !== chatId) return;
 
       applyChat(chat);
-      setMessages(nextMessages);
+
+      setMessages(sortMessagesAsc(nextMessages));
+      setDraft("");
+      setActionError("");
     } catch (loadError) {
-      setError(getApiErrorMessage(loadError, "Не удалось открыть диалог."));
+      setError(
+        getApiErrorMessage(
+          loadError,
+          "Не удалось открыть диалог."
+        )
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+  async function sendMessage(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     const text = draft.trim();
@@ -285,19 +505,34 @@ export function Chat() {
     setActionError("");
 
     try {
-      const created = await postChatMessage(activeChat.id, text);
-
-      setMessages((previous) =>
-        previous.some((item) => item.id === created.id)
-          ? previous
-          : [...previous, created]
+      const created = await postChatMessage(
+        activeChat.id,
+        text
       );
+
+      setMessages((previous) => {
+        if (
+          previous.some(
+            (item) => item.id === created.id
+          )
+        ) {
+          return previous;
+        }
+
+        return sortMessagesAsc([
+          ...previous,
+          created,
+        ]);
+      });
 
       setDraft("");
       void refreshDialogs();
     } catch (sendError) {
       setActionError(
-        getApiErrorMessage(sendError, "Не удалось отправить сообщение.")
+        getApiErrorMessage(
+          sendError,
+          "Не удалось отправить сообщение."
+        )
       );
     } finally {
       setSending(false);
@@ -311,7 +546,9 @@ export function Chat() {
     setActionError("");
 
     try {
-      const transfer = await startChatTransfer(activeChat.id);
+      const transfer = await startChatTransfer(
+        activeChat.id
+      );
 
       setActiveChat((current) =>
         current
@@ -321,7 +558,8 @@ export function Chat() {
               canStartTransfer: false,
               listing: {
                 ...current.listing,
-                status: transfer.listingStatus || "in_transfer",
+                status:
+                  transfer.listingStatus || "in_transfer",
               },
             }
           : current
@@ -334,11 +572,15 @@ export function Chat() {
         fetchMyChats(),
       ]);
 
-      setMessages(nextMessages);
+      setMessages(sortMessagesAsc(nextMessages));
+
       updateDialogs(list);
     } catch (startError) {
       setActionError(
-        getApiErrorMessage(startError, "Не удалось начать передачу.")
+        getApiErrorMessage(
+          startError,
+          "Не удалось начать передачу."
+        )
       );
     } finally {
       setStarting(false);
@@ -346,13 +588,20 @@ export function Chat() {
   }
 
   async function handleConfirmTransfer() {
-    if (!activeChat || confirming || !activeChat.transfer?.canConfirm) return;
+    if (
+      !activeChat ||
+      confirming ||
+      !activeChat.transfer?.canConfirm
+    ) {
+      return;
+    }
 
     setConfirming(true);
     setActionError("");
 
     try {
-      const transfer: Transfer = await confirmChatTransfer(activeChat.id);
+      const transfer: Transfer =
+        await confirmChatTransfer(activeChat.id);
 
       setActiveChat((current) =>
         current
@@ -361,7 +610,9 @@ export function Chat() {
               transfer,
               listing: {
                 ...current.listing,
-                status: transfer.listingStatus || current.listing.status,
+                status:
+                  transfer.listingStatus ||
+                  current.listing.status,
               },
             }
           : current
@@ -372,34 +623,34 @@ export function Chat() {
         fetchMyChats(),
       ]);
 
-      setMessages(nextMessages);
+      setMessages(sortMessagesAsc(nextMessages));
+
       updateDialogs(list);
     } catch (confirmError) {
       setActionError(
-        getApiErrorMessage(confirmError, "Не удалось подтвердить передачу.")
+        getApiErrorMessage(
+          confirmError,
+          "Не удалось подтвердить передачу."
+        )
       );
 
       try {
         const refreshed = await fetchChat(activeChat.id);
+
         setActiveChat(refreshed);
-      } catch {}
+      } catch {
+      }
     } finally {
       setConfirming(false);
     }
   }
 
-  const headerStatus =
-    activeChat?.transfer?.status === "completed" ||
-    listingStatus === "transferred"
-      ? "Передано"
-      : activeChat?.transfer || listingStatus === "in_transfer"
-        ? "В процессе передачи"
-        : "";
-
   if (loading && !activeChat) {
     return (
       <main className={styles.page}>
-        <div className={styles.centerState}>Загружаем диалоги…</div>
+        <div className={styles.centerState}>
+          Загружаем диалоги…
+        </div>
       </main>
     );
   }
@@ -408,63 +659,89 @@ export function Chat() {
     <main className={styles.page}>
       <div className={styles.chatLayout}>
         <aside className={styles.sidebar}>
-          <h1 className={styles.pageTitle}>Сообщения</h1>
+          <h1 className={styles.pageTitle}>
+            Сообщения
+          </h1>
 
-          {dialogs.length === 0 ? (
-            <div className={styles.emptyDialogs}>
-              Здесь появятся ваши переписки с пользователями.
-            </div>
-          ) : (
-            dialogs.map((dialog) => (
-              <button
-                type="button"
-                key={dialog.id}
-                className={`${styles.dialog} ${
-                  activeChat?.id === dialog.id ? styles.activeDialog : ""
-                }`}
-                onClick={() => void selectChat(dialog.id)}
-              >
-                <span className={styles.dialogPhoto}>
-                  {dialog.listing.image ? (
-                    <img src={dialog.listing.image} alt="" />
-                  ) : null}
-                </span>
-
-                <span className={styles.dialogText}>
-                  <strong>{dialog.otherUser.name}</strong>
-                  <span className={styles.dialogItem}>
-                    {dialog.listing.title}
-                  </span>
-                  <span className={styles.dialogPreview}>
-                    {dialog.lastMessage?.text || "Начните переписку"}
-                  </span>
-                </span>
-
-                <span className={styles.dialogMeta}>
-                  <span className={styles.dialogTime}>
-                    {timeLabel(dialog.lastMessage?.created_at || null)}
+          <div className={styles.dialogsList}>
+            {dialogs.length === 0 ? (
+              <div className={styles.emptyDialogs}>
+                Здесь появятся ваши переписки с пользователями.
+              </div>
+            ) : (
+              dialogs.map((dialog) => (
+                <button
+                  type="button"
+                  key={dialog.id}
+                  className={`${styles.dialog} ${
+                    activeChat?.id === dialog.id
+                      ? styles.activeDialog
+                      : ""
+                  }`}
+                  onClick={() => void selectChat(dialog.id)}
+                >
+                  <span className={styles.dialogPhoto}>
+                    {dialog.listing.image ? (
+                      <img
+                        src={dialog.listing.image}
+                        alt=""
+                      />
+                    ) : null}
                   </span>
 
-                  {dialog.unreadCount > 0 && (
-                    <span className={styles.unread}>
-                      {dialog.unreadCount}
+                  <span className={styles.dialogText}>
+                    <strong>
+                      {dialog.otherUser.name}
+                    </strong>
+
+                    <span className={styles.dialogItem}>
+                      {capitalizeFirstLetter(
+                        dialog.listing.title
+                      )}
                     </span>
-                  )}
-                </span>
-              </button>
-            ))
-          )}
+
+                    <span className={styles.dialogPreview}>
+                      {dialog.lastMessage?.text ||
+                        "Начните переписку"}
+                    </span>
+                  </span>
+
+                  <span className={styles.dialogMeta}>
+                    <span className={styles.dialogTime}>
+                      {timeLabel(
+                        dialog.lastMessage?.created_at || null
+                      )}
+                    </span>
+
+                    {dialog.unreadCount > 0 && (
+                      <span className={styles.unread}>
+                        {dialog.unreadCount}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
         </aside>
 
-        <section className={styles.thread} aria-label="Переписка">
-          {error && <div className={styles.error}>{error}</div>}
+        <section
+          className={styles.thread}
+          aria-label="Переписка"
+        >
+          {error && (
+            <div className={styles.error}>
+              {error}
+            </div>
+          )}
 
           {!activeChat ? (
             <div className={styles.noSelection}>
               <h2>Выберите переписку</h2>
+
               <p>
-                Откройте объявление и нажмите «Написать», чтобы связаться с
-                владельцем.
+                Откройте объявление и нажмите «Написать»,
+                чтобы связаться с владельцем.
               </p>
             </div>
           ) : (
@@ -472,21 +749,35 @@ export function Chat() {
               <header className={styles.threadHeader}>
                 <span className={styles.headerAvatar}>
                   {otherUser?.avatar_url ? (
-                    <img src={otherUser.avatar_url} alt="" />
+                    <img
+                      src={otherUser.avatar_url}
+                      alt=""
+                    />
                   ) : null}
                 </span>
-                <strong>{otherUser?.name || "Пользователь"}</strong>
+
+                <strong>
+                  {otherUser?.name || "Пользователь"}
+                </strong>
               </header>
 
               <div className={styles.itemPreview}>
                 <span className={styles.itemPhoto}>
                   {activeChat.listing.image ? (
-                    <img src={activeChat.listing.image} alt="" />
+                    <img
+                      src={activeChat.listing.image}
+                      alt=""
+                    />
                   ) : null}
                 </span>
 
                 <span className={styles.itemInfo}>
-                  <strong>{activeChat.listing.title}</strong>
+                  <strong>
+                    {capitalizeFirstLetter(
+                      activeChat.listing.title
+                    )}
+                  </strong>
+
                   <small>
                     {activeChat.listing.transfer_type === "Обмен"
                       ? "Обмен"
@@ -521,28 +812,38 @@ export function Chat() {
                 {messages.length === 0 ? (
                   <div className={styles.emptyThread}>
                     <span>Сегодня</span>
+
                     <p>
                       Начните общение — напишите{" "}
-                      {otherUser?.name || "пользователю"}.
+                      {declineNameToDative(otherUser?.name)}.
                     </p>
                   </div>
                 ) : (
                   messages.map((message, index) => {
-                    const own = message.senderId === currentUserId;
-                    const isSystem = message.type === "system";
+                    const own =
+                      message.senderId === currentUserId;
+
+                    const isSystem =
+                      message.type === "system";
 
                     const previousDate =
                       index > 0
-                        ? dateLabel(messages[index - 1].createdAt)
+                        ? dateLabel(
+                            messages[index - 1].createdAt
+                          )
                         : "";
 
-                    const currentDate = dateLabel(message.createdAt);
+                    const currentDate =
+                      dateLabel(message.createdAt);
 
                     return (
                       <div key={message.id}>
-                        {currentDate && currentDate !== previousDate && (
-                          <div className={styles.dayLabel}>{currentDate}</div>
-                        )}
+                        {currentDate &&
+                          currentDate !== previousDate && (
+                            <div className={styles.dayLabel}>
+                              {currentDate}
+                            </div>
+                          )}
 
                         <div
                           className={`${styles.messageRow} ${
@@ -563,11 +864,26 @@ export function Chat() {
                             }`}
                           >
                             <p>{message.text}</p>
+
                             {!isSystem && (
-                              <time>{timeLabel(message.createdAt)}</time>
+                              <time>
+                                {timeLabel(message.createdAt)}
+                              </time>
                             )}
                           </div>
                         </div>
+
+                        {activeChat.transfer &&
+                          index === transferStatusMessageIndex && (
+                            <ConfirmTransferActions
+                              transfer={activeChat.transfer}
+                              currentUserId={currentUserId}
+                              loading={confirming}
+                              onConfirm={() =>
+                                void handleConfirmTransfer()
+                              }
+                            />
+                          )}
                       </div>
                     );
                   })
@@ -576,23 +892,21 @@ export function Chat() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {activeChat.transfer && (
-                <ConfirmTransferActions
-                  transfer={activeChat.transfer}
-                  currentUserId={currentUserId}
-                  loading={confirming}
-                  onConfirm={() => void handleConfirmTransfer()}
-                />
-              )}
-
               {actionError && (
-                <p className={styles.actionError}>{actionError}</p>
+                <p className={styles.actionError}>
+                  {actionError}
+                </p>
               )}
 
-              <form className={styles.composer} onSubmit={sendMessage}>
+              <form
+                className={styles.composer}
+                onSubmit={sendMessage}
+              >
                 <textarea
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  onChange={(event) =>
+                    setDraft(event.target.value)
+                  }
                   placeholder="Сообщение"
                   rows={1}
                   aria-label="Текст сообщения"
@@ -617,6 +931,7 @@ export function Chat() {
                         strokeWidth="2"
                         strokeLinejoin="round"
                       />
+
                       <path
                         d="M7.5 14H25"
                         stroke="currentColor"

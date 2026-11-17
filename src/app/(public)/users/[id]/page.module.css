@@ -315,11 +315,20 @@
   }
   
   .adCard {
+    display: block;
     min-width: 0;
     padding: 10px;
     overflow: hidden;
     border-radius: 10px;
     background: #fff;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
+  }
+  
+  .adCard:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   }
   
   .photoArea {

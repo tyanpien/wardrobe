@@ -71,17 +71,21 @@
   transform: translateY(-50%);
   display: grid;
   place-items: center;
-  width: 31px;
+  width: 31px;   
   height: 31px;
+  padding: 0;
   border: 0;
-  border-radius: 50%;
-  color: #fff;
-  background: #e6f8a2;
-  font-size: 30px;
-  line-height: 1;
+  background: transparent; 
   cursor: pointer;
+  z-index: 2;
 }
 
+.galleryArrow img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
 .previous { left: 18px; }
 .next { right: 18px; }
 
@@ -236,6 +240,8 @@
 
 .descriptionBlock p {
   color: #282828;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   font-size: 17px;
   line-height: 1.45;
   white-space: pre-wrap;

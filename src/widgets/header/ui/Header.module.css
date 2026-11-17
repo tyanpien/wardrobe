@@ -173,6 +173,32 @@
   color: #e6e5e5;
 }
 
+
+.messageLink {
+  position: relative;
+}
+
+.messageBadge {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50px;
+  background: #e53935;
+  color: #fff;
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid #1c1c1c;
+  box-sizing: content-box;
+}
+
 @media (max-width: 900px) {
   .inner {
     gap: 12px;

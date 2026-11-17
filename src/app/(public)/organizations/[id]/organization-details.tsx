@@ -146,7 +146,12 @@ export function OrganizationDetails({ organizationId }: { organizationId: string
             ) : <p>Организация пока не указала категории принимаемых вещей.</p>}
             <div className={styles.policyGrid}>
               <section className={styles.policyColumn}><h2>Допустимое состояние</h2><div className={styles.conditionTags}>{organization.allowedConditions.map((condition) => <span key={condition}>{condition}</span>)}</div></section>
-              <section className={styles.policyColumn}><h2>Дополнительные требования</h2><p>{organization.extraRequirements}</p></section>
+              <section className={styles.policyColumn}>
+                <h2>Дополнительные требования</h2>
+                <p>
+                  {organization.extraRequirements || "Дополнительные требования не указаны."}
+                </p>
+              </section>
             </div>
             <section className={styles.rejectedCard}><h2>Не принимаем</h2><div className={styles.rejectedDivider} />
               {organization.rejectedItems.length > 0 ? <ul>{organization.rejectedItems.map((item) => <li key={item}>– {item}</li>)}</ul> : <p>Ограничения не указаны.</p>}

@@ -38,6 +38,11 @@ export default function ItemPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  function capitalizeFirstLetter(text: string): string {
+    if (!text) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -56,9 +61,6 @@ export default function ItemPage() {
         setItem(detail);
         setIsOwner(owner);
         setActivePhoto(0);
-
-        // Данные автора объявления загружаем из публичного профиля,
-        // а не из localStorage текущего пользователя.
         setSellerName("Пользователь");
         setSellerPhoto("");
 
@@ -68,7 +70,6 @@ export default function ItemPage() {
           setSellerName(seller.name || "Пользователь");
           setSellerPhoto(getAvatarUrl(seller.avatar_url));
         } catch {
-          // Если профиль временно недоступен, само объявление всё равно показываем.
           if (!cancelled) {
             setSellerName(detail.ownerName || "Пользователь");
           }
@@ -202,7 +203,7 @@ export default function ItemPage() {
                       )
                     }
                   >
-                    ‹
+                    <img src="/strelka-left.svg" alt="" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -212,7 +213,7 @@ export default function ItemPage() {
                       setActivePhoto((current) => (current + 1) % photos.length)
                     }
                   >
-                    ›
+                    <img src="/strelka-right.svg" alt="" aria-hidden="true" />
                   </button>
                 </>
               )}
@@ -238,7 +239,7 @@ export default function ItemPage() {
 
           <section className={styles.details}>
             <div className={styles.titleRow}>
-              <h1>{item.title}</h1>
+              <h1>{capitalizeFirstLetter(item.title)}</h1>
               {isOwner && item.status !== "published" && (
                 <span className={styles.unpublishedBadge}>Снято с публикации</span>
               )}
@@ -286,7 +287,7 @@ export default function ItemPage() {
 
             <div className={styles.descriptionBlock}>
               <h2>Описание</h2>
-              <p>{item.description}</p>
+              <p>{capitalizeFirstLetter(item.description)}</p>
             </div>
 
             {!isOwner && (

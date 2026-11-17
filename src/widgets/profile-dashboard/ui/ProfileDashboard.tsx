@@ -30,7 +30,7 @@ import {
   getMyOrganizations,
   getOrganizationStatus,
 } from "@/entities/organization/api";
-
+import { TransferHistory } from "./TransferHistory";
 import type {
   MyOrganization,
   OrganizationStatus,
@@ -51,6 +51,12 @@ type ProfileData = {
 const categoryLabels = ITEM_CATEGORY_LABELS;
 const statusLabels = ITEM_STATUS_LABELS;
 const conditionLabels = ITEM_CONDITION_LABELS;
+
+function capitalizeFirstLetter(text: string): string {
+  if (!text) return text;
+
+  return text.charAt(0).toLocaleUpperCase("ru-RU") + text.slice(1);
+}
 
 export function ProfileDashboard() {
   const [profile, setProfile] = useState<ProfileData>({
@@ -207,18 +213,13 @@ export function ProfileDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-
+    if (tab === "history" || tab === "volunteer") return;
     async function loadAds() {
       setAdsLoading(true);
       setAdsError("");
 
       try {
-        const statuses: ItemStatus[] | undefined =
-          tab === "history"
-            ? ["transferred"]
-            : status
-              ? [status]
-              : undefined;
+        const statuses: ItemStatus[] | undefined = status ? [status] : undefined;
 
         const response = await fetchMyListings({
           category: category || undefined,
@@ -477,15 +478,21 @@ export function ProfileDashboard() {
           Волонтерство
         </button>
 
-        <span className={styles.tabSpacer} />
+        {tab === "ads" && (
+          <>
+            <span className={styles.tabSpacer} />
 
-        <Link href="/my-items/create" className={styles.createButton}>
-          Создать объявление
-        </Link>
+            <Link href="/my-items/create" className={styles.createButton}>
+              Создать объявление
+            </Link>
+          </>
+        )}
       </nav>
 
       {tab === "volunteer" ? (
         <div className={styles.emptyPanel}>Раздел волонтерства</div>
+      ) : tab === "history" ? (
+        <TransferHistory />
       ) : (
         <>
           <div className={styles.toolbar}>
@@ -723,9 +730,11 @@ export function ProfileDashboard() {
                   </div>
 
                   <div className={styles.cardBody}>
-                    <h2>{ad.title}</h2>
-                    <p className={styles.description}>{ad.description}</p>
-
+                    <h2>{capitalizeFirstLetter(ad.title)}</h2>
+                    <p className={styles.description}>
+                      {capitalizeFirstLetter(ad.description)}
+                    </p>
+                    
                     <span className={styles.locationPin} title={ad.city}>
                       <img src="/location.svg" alt="" />
                       {ad.city}

@@ -1,4 +1,8 @@
 import type { ItemCategory, ItemCondition, ItemSubcategory } from "@/entities/item";
+import {
+  parseOrganizationRuleItems,
+  normalizeOrganizationRuleText,
+} from "@/shared/lib/organization-rules";
 
 export type OrganizationAddress = {
   id: string;
@@ -250,10 +254,13 @@ export function mapOrganizationDetail(
       items: category.subcategories,
     })),
     allowedConditions: dto.acceptance_rules.conditions,
-    extraRequirements:
-      dto.acceptance_rules.additional_requirements ??
-      "Дополнительные требования не указаны.",
-    rejectedItems: dto.acceptance_rules.not_accepted,
+    extraRequirements: normalizeOrganizationRuleText(
+      dto.acceptance_rules.additional_requirements ?? ""
+    ),
+    
+    rejectedItems: parseOrganizationRuleItems(
+      dto.acceptance_rules.not_accepted
+    ),
     points: dto.addresses.map((address) => ({
       id: address.id,
       title: address.title,

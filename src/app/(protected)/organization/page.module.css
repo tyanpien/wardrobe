@@ -121,6 +121,14 @@
     gap: 38px;
   }
   
+  .characterCounter {
+    margin-top: 0px !important;
+    color: #96958b !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-align: left;
+  }
+  
   .pill {
     display: inline-flex;
     align-items: center;

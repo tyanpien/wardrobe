@@ -1,13 +1,155 @@
 .footer {
+  flex-shrink: 0;
+  width: 100%;
   margin-top: auto;
-  background: #1C1C1C;
+  background-color: #1C1C1C;
+  color: #ffffff;
+  padding: 32px 0 20px;
+  border-radius: 32px 32px 0 0;
 }
 
-.inner {
-  width: min(1120px, calc(100% - 32px));
+.container {
+  width: 100%;
+  max-width: 1410px;
   margin: 0 auto;
-  padding: 20px 0;
-  color: var(--color-muted);
+  padding: 0 40px;
+}
+
+.topSection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr) minmax(0, 1fr);
+  gap: 60px;
+  margin-bottom: 28px;
+}
+
+.columnLeft,
+.columnCenter,
+.columnRight {
+  min-width: 0;
+}
+
+.logoTitle {
+  color: #fff;
+  font-family: "Jura", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.description {
   font-size: 14px;
-  height: 100px;
+  line-height: 1.5;
+  color: #8f8f8f;
+  max-width: 300px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: #8f8f8f;
+  line-height: 1.4;
+}
+
+.sectionTitle1 {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: #E7F9A9;
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.navLink {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.navLink:hover {
+  color: #E7F9A9;
+}
+
+.columnRight {
+  max-width: 320px;
+}
+
+.columnRight .sectionTitle {
+  color: #e0e0e0;
+  font-size: 15px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.columnRight .description {
+  margin-bottom: 14px;
+}
+
+.actionLink {
+  display: inline-block;
+  color: #E7F9A9;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.actionLink:hover {
+  opacity: 0.8;
+}
+
+.bottomSection {
+  border-top: 1px solid #2a2a2a;
+  padding-top: 16px;
+}
+
+.copyright {
+  font-size: 12px;
+  color: #666666;
+}
+
+@media (max-width: 900px) {
+  .topSection {
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+  }
+
+  .columnRight {
+    grid-column: 1 / -1;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .footer {
+    padding: 28px 0 18px;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .container {
+    padding: 0 20px;
+  }
+
+  .topSection {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .columnRight {
+    grid-column: auto;
+  }
+
+  .logoTitle {
+    font-size: 19px;
+  }
+
+  .bottomSection {
+    padding-top: 14px;
+  }
 }

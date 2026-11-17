@@ -263,18 +263,22 @@
 
 .policyGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 30px;
   padding: 28px 0;
 }
 
 .policyColumn {
+  min-width: 0;
   padding: 0 30px;
+  box-sizing: border-box;
 }
 
 .policyColumn:first-child {
   padding-left: 0;
-  border-right:0.5px solid #96958B;
+  border-right: 0.5px solid #96958B;
 }
 
 .policyColumn:last-child {
@@ -284,6 +288,7 @@
 .policyColumn h2 {
   font-size: 17px;
   margin-bottom: 16px;
+  overflow-wrap: anywhere;
 }
 
 .policyColumn p {
@@ -292,6 +297,8 @@
   color: #626262;
   font-size: 14px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .conditionTags {
@@ -349,6 +356,20 @@
   font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
+}
+
+.normalizedRuleList {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.normalizedRuleList li {
+  padding-left: 4px;
+  line-height: 1.5;
+  color: inherit;
 }
 
 /* Пункты приёма */

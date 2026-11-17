@@ -6,6 +6,7 @@ import {
   ITEM_CONDITION_LABELS,
 } from "../model/labels";
 import { subcategoryLabel } from "../model/catalog";
+import { capitalizeFirstLetter } from "@/shared/lib/capitalizeFirstLetter";
 import styles from "./ItemCard.module.css";
 
 const statusClass: Record<string, string> = {
@@ -36,7 +37,9 @@ export function ItemCard({ item }: ItemCardProps) {
         </span>
       </div>
 
-      <h3 className={styles.title}>{item.title}</h3>
+      <h3 className={styles.title}>
+        {capitalizeFirstLetter(item.title)}
+      </h3>
 
       <span className={styles.locationPin} title={item.city}>
         <img src="/location.svg" alt="" />
