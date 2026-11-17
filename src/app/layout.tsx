@@ -1,4 +1,4 @@
-"use clien";
+"use client";
 
 import "./globals.css";
 import type { ReactNode } from "react";
@@ -44,7 +44,7 @@ export default function RootLayout({
 
         <Script
           src={`https://api-maps.yandex.ru/v3/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY}&lang=ru_RU`}
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
       </body>
     </html>
