@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChangeEvent,
   DragEvent,
@@ -23,8 +23,11 @@ import {
   getListingErrorMessage,
   getSubcategoryOptions,
   prepareListingPhoto,
+  conditionToApi,
 } from "@/entities/item";
 import { getMyProfile } from "@/entities/user/api/profile";
+import { getOrganizationDto } from "@/entities/organization/api/organizations";
+import type { OrganizationDetailDto } from "@/entities/organization/model/dto";
 
 type Transfer = "free" | "exchange";
 
@@ -38,11 +41,6 @@ type FieldName = "title" | "description" | "category" | "city" | "photos";
 
 type FieldErrors = Partial<Record<FieldName, string>>;
 
-const CATEGORIES = CATEGORY_OPTIONS.map((item) => ({
-  value: item.value,
-  label: item.label,
-}));
-
 const CONDITIONS: { value: ItemCondition; label: string }[] = [
   { value: "new", label: "Новое" },
   { value: "good", label: "Хорошее" },
@@ -52,8 +50,18 @@ const CONDITIONS: { value: ItemCondition; label: string }[] = [
 
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
+function normalizeRule(value: string | null | undefined): string {
+  return (value ?? "").trim().toLocaleLowerCase("ru-RU");
+}
+
 export default function CreateItemPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const organizationId = searchParams.get("organizationId");
+  const isOrganizationMode = Boolean(organizationId);
+  const returnToOrganization = organizationId
+    ? `/organizations/${organizationId}?openTransfer=1`
+    : null;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
@@ -72,6 +80,11 @@ export default function CreateItemPage() {
   const [success, setSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [organization, setOrganization] =
+    useState<OrganizationDetailDto | null>(null);
+  const [organizationLoading, setOrganizationLoading] = useState(false);
+  const [organizationError, setOrganizationError] = useState("");
 
   function clearFieldError(field: FieldName) {
     setFieldErrors((current) => {
@@ -120,12 +133,123 @@ export default function CreateItemPage() {
   }, []);
 
   useEffect(() => {
+    if (!organizationId) {
+      setOrganization(null);
+      setOrganizationError("");
+      setOrganizationLoading(false);
+      return;
+    }
+    const currentOrganizationId = organizationId;
+    let cancelled = false;
+
+    async function loadOrganizationRules() {
+      setOrganizationLoading(true);
+      setOrganizationError("");
+
+      try {
+        const result = await getOrganizationDto(currentOrganizationId);
+        if (cancelled) return;
+
+        setOrganization(result);
+
+        const firstAllowedCondition = CONDITIONS.find((option) =>
+          result.acceptance_rules.conditions.some(
+            (value) =>
+              normalizeRule(value) ===
+                normalizeRule(conditionToApi(option.value)) ||
+              normalizeRule(value) === normalizeRule(option.value),
+          ),
+        );
+
+        if (firstAllowedCondition) {
+          setCondition(firstAllowedCondition.value);
+        }
+      } catch {
+        if (!cancelled) {
+          setOrganizationError(
+            "Не удалось загрузить правила приёма организации. Попробуйте обновить страницу.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setOrganizationLoading(false);
+        }
+      }
+    }
+
+    void loadOrganizationRules();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId]);
+
+  useEffect(() => {
     return () => {
       photos.forEach((photo) => {
         URL.revokeObjectURL(photo.previewUrl);
       });
     };
   }, [photos]);
+
+  const allowedCategories = !isOrganizationMode
+    ? CATEGORY_OPTIONS
+    : organization
+      ? organization.acceptance_rules.categories.flatMap((rule) => {
+          const categoryOption = CATEGORY_OPTIONS.find(
+            (option) =>
+              normalizeRule(option.api) === normalizeRule(rule.name) ||
+              normalizeRule(option.label) === normalizeRule(rule.name) ||
+              normalizeRule(option.value) === normalizeRule(rule.name),
+          );
+
+          if (!categoryOption) return [];
+
+          const allowedSubcategories =
+            rule.subcategories.length === 0
+              ? categoryOption.subcategories
+              : categoryOption.subcategories.filter((subcategoryOption) =>
+                  rule.subcategories.some(
+                    (value) =>
+                      normalizeRule(value) ===
+                        normalizeRule(subcategoryOption.api) ||
+                      normalizeRule(value) ===
+                        normalizeRule(subcategoryOption.label) ||
+                      normalizeRule(value) ===
+                        normalizeRule(subcategoryOption.value),
+                  ),
+                );
+
+          return [
+            {
+              ...categoryOption,
+              subcategories: allowedSubcategories,
+            },
+          ];
+        })
+      : [];
+
+  const allowedConditions = !isOrganizationMode
+    ? CONDITIONS
+    : organization
+      ? CONDITIONS.filter((option) =>
+          organization.acceptance_rules.conditions.some(
+            (value) =>
+              normalizeRule(value) ===
+                normalizeRule(conditionToApi(option.value)) ||
+              normalizeRule(value) === normalizeRule(option.value),
+          ),
+        )
+      : [];
+
+  const selectedCategoryOption = allowedCategories.find(
+    (option) => option.value === category,
+  );
+
+  const categorySelectOptions = allowedCategories.map((option) => ({
+    value: option.value,
+    label: option.label,
+  }));
 
   async function readFiles(fileList: FileList | null) {
     if (!fileList) return;
@@ -224,6 +348,32 @@ export default function CreateItemPage() {
 
     if (!category) {
       errors.category = "Выберите категорию.";
+    } else if (
+      isOrganizationMode &&
+      !allowedCategories.some((option) => option.value === category)
+    ) {
+      errors.category =
+        "Эта категория не входит в правила приёма организации.";
+    }
+
+    if (
+      isOrganizationMode &&
+      !allowedConditions.some((option) => option.value === condition)
+    ) {
+      errors.category =
+        "Выберите состояние из правил приёма организации.";
+    }
+
+    if (
+      isOrganizationMode &&
+      subcategory &&
+      selectedCategoryOption &&
+      !selectedCategoryOption.subcategories.some(
+        (option) => option.value === subcategory,
+      )
+    ) {
+      errors.category =
+        "Выберите подкатегорию из правил приёма организации.";
     }
 
     if (!city.trim()) {
@@ -249,12 +399,31 @@ export default function CreateItemPage() {
       return;
     }
 
-    setSubmitting(true);
-
     if (!category) {
-      setError("Выберите категорию");
       return;
     }
+
+    if (isOrganizationMode) {
+      if (organizationLoading || !organization || organizationError) {
+        setError(
+          organizationError ||
+            "Дождитесь загрузки правил организации.",
+        );
+        return;
+      }
+
+      if (
+        allowedCategories.length === 0 ||
+        allowedConditions.length === 0
+      ) {
+        setError(
+          "В правилах организации не указаны доступные категории или состояния.",
+        );
+        return;
+      }
+    }
+
+    setSubmitting(true);
 
     try {
       const created = await createListing({
@@ -274,6 +443,11 @@ export default function CreateItemPage() {
         deliveryMethod: delivery,
         photos: photos.map((photo) => photo.file),
       });
+
+      if (isOrganizationMode && returnToOrganization) {
+        router.replace(returnToOrganization);
+        return;
+      }
 
       setCreatedId(created.id);
       setSuccess(true);
@@ -345,7 +519,11 @@ export default function CreateItemPage() {
   }
 
   const subcategoryOptions = category
-    ? getSubcategoryOptions(category).map((item) => ({
+    ? (
+        isOrganizationMode
+          ? selectedCategoryOption?.subcategories ?? []
+          : getSubcategoryOptions(category)
+      ).map((item) => ({
         value: item.value,
         label: item.label,
       }))
@@ -355,14 +533,27 @@ export default function CreateItemPage() {
     <main className={styles.page}>
       <div className={styles.pageHeading}>
         <Link
-          href="/profile"
+          href={returnToOrganization ?? "/profile"}
           className={styles.backButton}
           aria-label="Назад"
         >
           <img src="/eva_arrow-back-fill.svg" alt="Назад" />
         </Link>
-        <h1>Создать объявление</h1>
+
+        <h1>
+          {isOrganizationMode
+            ? "Создать объявление для организации"
+            : "Создать объявление"}
+        </h1>
       </div>
+
+      {isOrganizationMode && (
+        <p role="status" className={styles.error}>
+          {organizationLoading
+            ? "Загружаем правила приёма организации..."
+            : organizationError }
+        </p>
+      )}
 
       <form
         className={styles.form}
@@ -432,7 +623,7 @@ export default function CreateItemPage() {
             >
               <CategorySelect
                 value={category}
-                options={CATEGORIES}
+                options={categorySelectOptions}
                 placeholder="Выберите категорию"
                 onChange={(value) => {
                   setCategory(value);
@@ -468,7 +659,7 @@ export default function CreateItemPage() {
           <fieldset className={styles.choiceGroup}>
             <legend>Состояние</legend>
             <div className={styles.conditionOptions}>
-              {CONDITIONS.map((item) => (
+              {allowedConditions.map((item) => (
                 <label className={styles.radioLabel} key={item.value}>
                   <input
                     type="radio"
@@ -650,11 +841,20 @@ export default function CreateItemPage() {
               {error}
             </p>
           )}
+
           <div className={styles.submitRow}>
             <button
               type="submit"
               className={styles.publishButton}
-              disabled={submitting}
+              disabled={
+                submitting ||
+                (isOrganizationMode &&
+                  (organizationLoading ||
+                    Boolean(organizationError) ||
+                    !organization ||
+                    allowedCategories.length === 0 ||
+                    allowedConditions.length === 0))
+              }
             >
               {submitting ? "Публикация..." : "Опубликовать"}
             </button>

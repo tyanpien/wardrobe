@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrganizationMapPoint } from "@/entities/organization/model/dto";
 import styles from "./MapView.module.css";
 
+type Coordinates = [number, number];
 type YandexMapApi = {
   ready: Promise<void>;
 
@@ -11,8 +12,8 @@ type YandexMapApi = {
     container: HTMLElement,
     options: {
       location:
-        | { center: [number, number]; zoom: number }
-        | { bounds: [[number, number], [number, number]] };
+        | { center: Coordinates; zoom: number }
+        | { bounds: [Coordinates, Coordinates] };
       behaviors?: string[];
     },
   ) => {
@@ -25,7 +26,7 @@ type YandexMapApi = {
 
   YMapMarker: new (
     props: {
-      coordinates: [number, number];
+      coordinates: Coordinates;
     },
     element: HTMLElement,
   ) => unknown;
@@ -37,9 +38,9 @@ declare global {
   }
 }
 
-const DEFAULT_CENTER: [number, number] = [60.6057, 56.8389];
+const DEFAULT_CENTER: Coordinates = [60.6057, 56.8389];
 
-function loadYandexMaps(apiKey: string): Promise<YandexMapApi> {
+function waitForYandexMaps(): Promise<YandexMapApi> {
   return new Promise((resolve, reject) => {
     if (window.ymaps3) {
       window.ymaps3.ready
@@ -49,41 +50,116 @@ function loadYandexMaps(apiKey: string): Promise<YandexMapApi> {
       return;
     }
 
+    const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY;
+
+    if (!apiKey) {
+      reject(new Error("Не указан ключ API Яндекс Карт."));
+      return;
+    }
+
     let script = document.querySelector<HTMLScriptElement>(
       'script[src*="api-maps.yandex.ru/v3/"]',
     );
 
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const cleanup = () => {
+      script?.removeEventListener("load", handleLoad);
+      script?.removeEventListener("error", handleError);
+      clearTimeout(timeoutId);
+    };
+
     const handleLoad = () => {
       if (!window.ymaps3) {
-        reject(new Error("Яндекс Карты не загрузились"));
+        cleanup();
+        reject(
+          new Error(
+            "Скрипт Яндекс Карт загружен, но API недоступен. Проверьте ключ API.",
+          ),
+        );
         return;
       }
 
       window.ymaps3.ready
-        .then(() => resolve(window.ymaps3!))
-        .catch(reject);
+        .then(() => {
+          cleanup();
+          resolve(window.ymaps3!);
+        })
+        .catch((error) => {
+          cleanup();
+          reject(error);
+        });
     };
 
-    if (script) {
-      script.addEventListener("load", handleLoad, { once: true });
-      script.addEventListener(
-        "error",
-        () => reject(new Error("Не удалось загрузить Яндекс Карты")),
-        { once: true },
-      );
+    const handleError = () => {
+      cleanup();
+      reject(new Error("Не удалось загрузить Яндекс Карты."));
+    };
 
-      return;
+    if (!script) {
+      script = document.createElement("script");
+      script.src = `https://api-maps.yandex.ru/v3/?apikey=${apiKey}&lang=ru_RU`;
+      script.async = true;
+      document.head.appendChild(script);
     }
 
-    script = document.createElement("script");
-    script.src = `https://api-maps.yandex.ru/v3/?apikey=${apiKey}&lang=ru_RU`;
-    script.async = true;
-    script.onload = handleLoad;
-    script.onerror = () =>
-      reject(new Error("Не удалось загрузить Яндекс Карты"));
+    script.addEventListener("load", handleLoad, { once: true });
+    script.addEventListener("error", handleError, { once: true });
 
-    document.head.appendChild(script);
+    timeoutId = setTimeout(() => {
+      cleanup();
+      reject(
+        new Error(
+          "Превышено время ожидания загрузки Яндекс Карт. Проверьте подключение к интернету и ключ API.",
+        ),
+      );
+    }, 20000);
   });
+}
+
+function getMapLocation(
+  coordinates: Coordinates[],
+):
+  | { center: Coordinates; zoom: number }
+  | { bounds: [Coordinates, Coordinates] } {
+  if (coordinates.length === 0) {
+    return {
+      center: DEFAULT_CENTER,
+      zoom: 10,
+    };
+  }
+
+  if (coordinates.length === 1) {
+    return {
+      center: coordinates[0],
+      zoom: 15,
+    };
+  }
+
+  const longitudes = coordinates.map(([longitude]) => longitude);
+  const latitudes = coordinates.map(([, latitude]) => latitude);
+
+  const minLongitude = Math.min(...longitudes);
+  const maxLongitude = Math.max(...longitudes);
+  const minLatitude = Math.min(...latitudes);
+  const maxLatitude = Math.max(...latitudes);
+
+  if (
+    minLongitude === maxLongitude &&
+    minLatitude === maxLatitude
+  ) {
+    return {
+      center: coordinates[0],
+      zoom: 15,
+    };
+  }
+
+  return {
+    bounds: [
+      [minLongitude, minLatitude],
+      [maxLongitude, maxLatitude],
+    ],
+  };
 }
 
 export function MapView({
@@ -92,97 +168,46 @@ export function MapView({
   points: OrganizationMapPoint[];
 }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
+
   const [error, setError] = useState("");
 
-  const geocodedPoints = points.filter(
-    (point) =>
-      point.latitude !== null &&
-      point.longitude !== null,
+  const geocodedPoints = useMemo(
+    () =>
+      points.filter(
+        (point) =>
+          typeof point.latitude === "number" &&
+          typeof point.longitude === "number" &&
+          Number.isFinite(point.latitude) &&
+          Number.isFinite(point.longitude),
+      ),
+    [points],
   );
-
-  const geocodedPointCount = geocodedPoints.length;
 
   useEffect(() => {
     let map: InstanceType<YandexMapApi["YMap"]> | null = null;
     let cancelled = false;
 
-    async function initMap() {
+    async function initializeMap() {
       try {
-        const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY;
+        setError("");
 
-        if (!apiKey) {
-          throw new Error("Не найден ключ Яндекс Карт");
+        const ymaps3 = await waitForYandexMaps();
+
+        if (cancelled || !mapContainerRef.current) {
+          return;
         }
 
-        const ymaps3 = await loadYandexMaps(apiKey);
-
-        if (cancelled || !mapContainerRef.current) return;
-
-        const coordinates = geocodedPoints.map(
-          (point) =>
-            [
-              point.longitude as number,
-              point.latitude as number,
-            ] as [number, number],
+        const coordinates: Coordinates[] = geocodedPoints.map(
+          (point) => [
+            point.longitude as number,
+            point.latitude as number,
+          ],
         );
-
-        const firstPoint = coordinates[0];
-
-        let location:
-          | {
-              center: [number, number];
-              zoom: number;
-            }
-          | {
-              bounds: [[number, number], [number, number]];
-            };
-
-        if (coordinates.length === 0) {
-          location = {
-            center: DEFAULT_CENTER,
-            zoom: 10,
-          };
-        } else if (coordinates.length === 1) {
-          location = {
-            center: firstPoint,
-            zoom: 15,
-          };
-        } else {
-          const longitudes = coordinates.map(
-            ([longitude]) => longitude,
-          );
-
-          const latitudes = coordinates.map(
-            ([, latitude]) => latitude,
-          );
-
-          const minLongitude = Math.min(...longitudes);
-          const maxLongitude = Math.max(...longitudes);
-          const minLatitude = Math.min(...latitudes);
-          const maxLatitude = Math.max(...latitudes);
-
-          if (
-            minLongitude === maxLongitude &&
-            minLatitude === maxLatitude
-          ) {
-            location = {
-              center: firstPoint,
-              zoom: 15,
-            };
-          } else {
-            location = {
-              bounds: [
-                [minLongitude, minLatitude],
-                [maxLongitude, maxLatitude],
-              ],
-            };
-          }
-        }
 
         const instance = new ymaps3.YMap(
           mapContainerRef.current,
           {
-            location,
+            location: getMapLocation(coordinates),
             behaviors: [
               "drag",
               "scrollZoom",
@@ -210,24 +235,24 @@ export function MapView({
             return;
           }
 
-          const markerElement = document.createElement("div");
+          const marker = document.createElement("div");
 
-          markerElement.className = styles.pointMarker;
-          markerElement.setAttribute("role", "img");
-
-          markerElement.setAttribute(
+          marker.className = styles.pointMarker;
+          marker.setAttribute("role", "img");
+          marker.setAttribute(
             "aria-label",
             `${point.organization_name}: ${point.title}`,
           );
 
-          markerElement.title = [
+          marker.title = [
             point.organization_name,
+            point.title,
             point.city,
             point.address_line,
             point.working_hours,
-          ].join("\n");
-
-          markerElement.textContent = "•";
+          ]
+            .filter(Boolean)
+            .join("\n");
 
           instance.addChild(
             new ymaps3.YMapMarker(
@@ -237,7 +262,7 @@ export function MapView({
                   point.latitude,
                 ],
               },
-              markerElement,
+              marker,
             ),
           );
         });
@@ -246,20 +271,19 @@ export function MapView({
           setError(
             mapError instanceof Error
               ? mapError.message
-              : "Не удалось загрузить карту",
+              : "Не удалось отобразить карту.",
           );
         }
       }
     }
 
-    setError("");
-    void initMap();
+    void initializeMap();
 
     return () => {
       cancelled = true;
       map?.destroy();
     };
-  }, [points]);
+  }, [geocodedPoints]);
 
   return (
     <section className={styles.mapSection}>
@@ -270,29 +294,31 @@ export function MapView({
 
       {error && (
         <div className={styles.mapError} role="alert">
-          {error}
+          <strong>Не удалось загрузить карту</strong>
+          <span>{error}</span>
         </div>
       )}
 
       {!error &&
         points.length > 0 &&
-        geocodedPointCount === 0 && (
+        geocodedPoints.length === 0 && (
           <div className={styles.mapNotice}>
             У пунктов приёма пока нет координат для отображения.
           </div>
         )}
 
-      {geocodedPointCount > 0 &&
-        points.length > geocodedPointCount && (
+      {!error &&
+        geocodedPoints.length > 0 &&
+        points.length > geocodedPoints.length && (
           <div className={styles.mapNotice}>
             На карте показаны пункты с определёнными координатами.
-            Остальные доступны в списке.
+            Остальные пункты не имеют координат.
           </div>
         )}
 
-      {points.length === 0 && !error && (
+      {!error && points.length === 0 && (
         <div className={styles.mapNotice}>
-          По выбранным условиям пункты приёма не найдены.
+          У этой организации пока нет пунктов приёма.
         </div>
       )}
     </section>

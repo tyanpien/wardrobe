@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -159,7 +158,9 @@ export default function InviteEmployeePage() {
           )}
 
           {requestError && (
-            <p role="alert">{requestError}</p>
+            <p className={styles.requestError} role="alert">
+              {requestError}
+            </p>
           )}
 
           <form

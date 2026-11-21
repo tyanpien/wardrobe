@@ -29,6 +29,7 @@ import {
   getSubcategoryOptions,
   subcategoryLabel,
 } from "@/entities/item";
+import { EcoImpact } from "@/widgets/eco-tracker";
 
 type Transfer = "exchange" | "free";
 type Category = ItemCategory;
@@ -220,12 +221,10 @@ export default function PublicUserPage() {
           </Link>
         </div>
 
-        <div className={styles.impact}>
-          <strong>
-            {user?.items_saved ?? 0}<span>ед</span>
-          </strong>
-          <span>спасено</span>
-        </div>
+        <EcoImpact
+          receivedCount={0}
+          transferredCount={user?.items_saved ?? 0}
+        />
       </section>
 
       <section className={styles.adsSection}>
@@ -388,14 +387,6 @@ export default function PublicUserPage() {
                 ) : (
                   <div className={styles.photoPlaceholder} />
                 )}
-
-                <div className={styles.dots} aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                </div>
               </div>
 
               <div className={styles.cardBody}>

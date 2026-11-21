@@ -35,6 +35,8 @@ import type {
   MyOrganization,
   OrganizationStatus,
 } from "@/entities/organization/model/dto";
+import { EcoImpact } from "@/widgets/eco-tracker";
+import { TransferToOrganizationModal } from "@/features/start-transfer";
 
 type Transfer = "exchange" | "free";
 type Status = ItemStatus;
@@ -61,11 +63,11 @@ function capitalizeFirstLetter(text: string): string {
 export function ProfileDashboard() {
   const [profile, setProfile] = useState<ProfileData>({
     name: "Имя Пользователя",
-    city: "Местоположение",
+    city: "",
     photo: "",
     about: "",
   });
-
+  const [itemsTransferred, setItemsTransferred] = useState(0);
   const [profileError, setProfileError] = useState("");
   const [ads, setAds] = useState<Item[]>([]);
   const [adsError, setAdsError] = useState("");
@@ -81,7 +83,7 @@ export function ProfileDashboard() {
 
   const statusFilterRef = useRef<HTMLDivElement>(null);
   const filterWrapRef = useRef<HTMLDivElement>(null);
-
+  const [transferAd, setTransferAd] = useState<Item | null>(null);
   const [activeAdMenu, setActiveAdMenu] = useState<string | null>(null);
   const [tab, setTab] = useState<"ads" | "history" | "volunteer">("ads");
   const [status, setStatus] = useState<Status | "">("");
@@ -140,7 +142,7 @@ export function ProfileDashboard() {
         const saved = await getMyProfile();
 
         if (cancelled) return;
-
+        setItemsTransferred(saved.items_saved ?? 0);
         setProfile({
           name: saved.name ?? "",
           city: saved.city ?? "",
@@ -351,12 +353,10 @@ export function ProfileDashboard() {
           </Link>
         </div>
 
-        <div className={styles.impact}>
-          <strong>
-            13<span>ед</span>
-          </strong>
-          <span>спасено</span>
-        </div>
+        <EcoImpact
+          receivedCount={0}
+          transferredCount={itemsTransferred}
+        />
       </section>
 
       <section
@@ -714,6 +714,18 @@ export function ProfileDashboard() {
                           >
                             Снять с публикации
                           </button>
+
+                          <button
+                            type="button"
+                            disabled={ad.status !== "published"}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveAdMenu(null);
+                              setTransferAd(ad);
+                            }}
+                          >
+                            Передать организации
+                          </button>
                         </div>
                       )}
                     </div>
@@ -764,6 +776,12 @@ export function ProfileDashboard() {
           </section>
         </>
       )}
+      <TransferToOrganizationModal
+        open={transferAd !== null}
+        item={transferAd}
+        city={profile.city}
+        onClose={() => setTransferAd(null)}
+      />
     </main>
   );
 }

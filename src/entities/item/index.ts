@@ -18,8 +18,10 @@ export {
 export {
   CATEGORY_OPTIONS,
   categoryToApi,
+  conditionToApi,
   getSubcategoryOptions,
   subcategoryLabel,
+  subcategoryToApi,
 } from "./model/catalog";
 export { ItemCard } from "./ui/ItemCard";
 export {
